@@ -1,35 +1,557 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hello World</title>
-  <style>
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #0f172a;
-      color: #f8fafc;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      text-align: center;
-    }
-    h1 {
-      font-size: 3rem;
-      margin-bottom: 0.5rem;
-    }
-    p {
-      color: #94a3b8;
-      font-size: 1.1rem;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>내 플랜</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #16213b;
+    --panel-2: #1c2b4a;
+    --border: #2a3a5c;
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent-2: #818cf8;
+    --good: #34d399;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+  }
+  a { color: var(--accent); }
+  .app { display: flex; min-height: 100vh; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 20px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .sidebar h1 {
+    font-size: 1.1rem;
+    margin: 4px 6px 12px;
+  }
+  .plan-list { display: flex; flex-direction: column; gap: 6px; }
+  .plan-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.92rem;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+  }
+  .plan-item:hover { background: var(--panel-2); }
+  .plan-item.active { background: var(--accent); color: #04121f; font-weight: 600; }
+  .plan-item .del {
+    opacity: 0;
+    background: none; border: none; color: inherit; cursor: pointer;
+    font-size: 0.85rem; padding: 2px 4px;
+  }
+  .plan-item:hover .del { opacity: 0.6; }
+  .plan-item .del:hover { opacity: 1; }
+
+  .btn {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 14px;
+    cursor: pointer;
+    font-size: 0.88rem;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); color: #04121f; border: none; font-weight: 600; }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.ghost { background: transparent; }
+  .btn.small { padding: 5px 10px; font-size: 0.8rem; }
+  .btn.danger:hover { border-color: var(--bad); color: var(--bad); }
+
+  .sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+  .sidebar-foot input[type=file] { display: none; }
+
+  /* Main */
+  .main { flex: 1; padding: 28px 36px 60px; max-width: 1100px; }
+  .plan-header { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; }
+  .plan-header input.plan-name {
+    background: transparent; border: none; color: var(--text);
+    font-size: 1.6rem; font-weight: 700; outline: none;
+    border-bottom: 2px solid transparent;
+    padding: 2px 4px;
+    min-width: 120px;
+  }
+  .plan-header input.plan-name:focus { border-bottom-color: var(--accent); }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 26px; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .card .label { color: var(--muted); font-size: 0.8rem; margin-bottom: 6px; }
+  .card .value { font-size: 1.35rem; font-weight: 700; }
+  .card .value.good { color: var(--good); }
+  .card .value.warn { color: var(--warn); }
+  .card .value.bad { color: var(--bad); }
+
+  .progress-wrap { margin-bottom: 30px; }
+  .progress-bar {
+    height: 10px; border-radius: 6px; background: var(--panel-2);
+    overflow: hidden; border: 1px solid var(--border);
+  }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--good)); transition: width .3s; }
+  .progress-label { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.8rem; color: var(--muted); }
+
+  section.block { margin-bottom: 34px; }
+  .block-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .block-head h2 { font-size: 1.05rem; margin: 0; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border-radius: var(--radius); overflow: hidden; }
+  thead th {
+    text-align: left; font-size: 0.78rem; color: var(--muted); font-weight: 600;
+    padding: 10px 12px; background: var(--panel-2); border-bottom: 1px solid var(--border);
+  }
+  tbody td { padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  td input[type=text], td input[type=number], td input[type=date], td select {
+    width: 100%; background: transparent; border: 1px solid transparent; border-radius: 6px;
+    color: var(--text); padding: 6px 8px; font-size: 0.9rem; font-family: inherit;
+  }
+  td input:hover, td select:hover { border-color: var(--border); }
+  td input:focus, td select:focus { border-color: var(--accent); outline: none; background: var(--panel-2); }
+  td input[type=number] { text-align: right; }
+  td.amount-cell { text-align: right; white-space: nowrap; color: var(--muted); font-size: 0.78rem; }
+  td.chk { text-align: center; width: 40px; }
+  td.op { width: 34px; text-align: center; }
+  input[type=checkbox] { width: 17px; height: 17px; cursor: pointer; accent-color: var(--good); }
+  .row-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.95rem; }
+  .row-del:hover { color: var(--bad); }
+  tr.done td { color: var(--muted); }
+  tr.done td input { color: var(--muted); text-decoration: line-through; }
+
+  tfoot td { padding: 10px 12px; font-weight: 700; border-top: 1px solid var(--border); }
+  .add-row { padding: 10px 12px; }
+
+  .contrib-summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .chip {
+    padding: 6px 12px; border-radius: 999px; background: var(--panel-2);
+    border: 1px solid var(--border); font-size: 0.82rem;
+  }
+  .chip b { color: var(--accent); }
+
+  .empty { color: var(--muted); text-align: center; padding: 40px 10px; }
+  footer.note { color: var(--muted); font-size: 0.78rem; margin-top: 40px; line-height: 1.6; }
+
+  @media (max-width: 720px) {
+    .app { flex-direction: column; }
+    .sidebar { width: 100%; flex-direction: row; overflow-x: auto; }
+    .plan-list { flex-direction: row; }
+    .sidebar-foot { flex-direction: row; margin-top: 0; }
+    .main { padding: 20px; }
+  }
+</style>
 </head>
 <body>
-  <div>
-    <h1>Hello, World! 👋</h1>
-    <p>Netlify 배포 테스트 페이지입니다.</p>
-  </div>
+<div class="app">
+  <aside class="sidebar">
+    <h1>📋 내 플랜</h1>
+    <div class="plan-list" id="planList"></div>
+    <button class="btn primary small" id="addPlanBtn">+ 새 플랜</button>
+    <div class="sidebar-foot">
+      <button class="btn small" id="exportBtn">내보내기 (JSON)</button>
+      <button class="btn small" id="importBtn">가져오기 (JSON)</button>
+      <input type="file" id="importFile" accept="application/json">
+    </div>
+  </aside>
+
+  <main class="main" id="main"></main>
+</div>
+
+<script>
+const STORAGE_KEY = 'myplans_v1';
+const uid = () => Math.random().toString(36).slice(2, 10);
+const won = n => (Number(n) || 0).toLocaleString('ko-KR') + '원';
+
+function seedData() {
+  return {
+    version: 1,
+    activePlanId: 'seed-cheongyak',
+    plans: [
+      {
+        id: 'seed-cheongyak',
+        name: '아파트 청약',
+        costItems: [
+          { id: uid(), label: '분양가', amount: 849400000 },
+          { id: uid(), label: '중도금 대출 이자', amount: 32000000 },
+          { id: uid(), label: '발코니 확장', amount: 22176000 },
+          { id: uid(), label: '에어컨', amount: 6800000 },
+        ],
+        payments: [
+          { id: uid(), date: '2026-05-29', label: '계약시 납부', amount: 12897600, done: true },
+          { id: uid(), date: '2026-06-29', label: '중도금 1회', amount: 32470000, done: true },
+          { id: uid(), date: '2026-09-28', label: '중도금(30%)', amount: 8692800, done: false },
+          { id: uid(), date: '2029-10-01', label: '중도금+잔금 (예정)', amount: 856315600, done: false },
+        ],
+        deposits: [
+          { id: uid(), contributor: '소진', label: '입금 1', amount: 5000000 },
+          { id: uid(), contributor: '소진', label: '입금 2', amount: 1448800 },
+          { id: uid(), contributor: '소진', label: '입금 3', amount: 20000000 },
+          { id: uid(), contributor: '희범', label: '입금 1', amount: 5000000 },
+          { id: uid(), contributor: '희범', label: '입금 2', amount: 1448800 },
+          { id: uid(), contributor: '희범', label: '입금 3', amount: 20000000 },
+        ],
+      },
+    ],
+  };
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) { console.error(e); }
+  const seed = seedData();
+  save(seed);
+  return seed;
+}
+function save(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+
+let state = load();
+
+function getActivePlan() {
+  return state.plans.find(p => p.id === state.activePlanId) || state.plans[0];
+}
+
+function persistAndRender() { save(state); render(); }
+
+/* ---------- Actions ---------- */
+function addPlan() {
+  const name = prompt('새 플랜 이름을 입력하세요', '새 플랜');
+  if (!name) return;
+  const plan = { id: uid(), name, costItems: [], payments: [], deposits: [] };
+  state.plans.push(plan);
+  state.activePlanId = plan.id;
+  persistAndRender();
+}
+function deletePlan(id, evt) {
+  evt.stopPropagation();
+  if (!confirm('이 플랜을 삭제할까요? 되돌릴 수 없습니다.')) return;
+  state.plans = state.plans.filter(p => p.id !== id);
+  if (state.activePlanId === id) {
+    state.activePlanId = state.plans[0] ? state.plans[0].id : null;
+  }
+  persistAndRender();
+}
+function selectPlan(id) { state.activePlanId = id; persistAndRender(); }
+function renamePlan(id, name) {
+  const plan = state.plans.find(p => p.id === id);
+  if (plan) { plan.name = name; save(state); renderSidebar(); }
+}
+
+function addCostItem() {
+  getActivePlan().costItems.push({ id: uid(), label: '', amount: 0 });
+  persistAndRender();
+}
+function addPayment() {
+  getActivePlan().payments.push({ id: uid(), date: '', label: '', amount: 0, done: false });
+  persistAndRender();
+}
+function addDeposit() {
+  getActivePlan().deposits.push({ id: uid(), contributor: '', label: '', amount: 0 });
+  persistAndRender();
+}
+function removeItem(arr, id) {
+  const plan = getActivePlan();
+  plan[arr] = plan[arr].filter(x => x.id !== id);
+  persistAndRender();
+}
+function updateItem(arr, id, field, value) {
+  const plan = getActivePlan();
+  const item = plan[arr].find(x => x.id === id);
+  if (!item) return;
+  item[field] = field === 'amount' ? (Number(value) || 0) : field === 'done' ? value : value;
+  save(state);
+  renderMain();
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'myplans-export.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importJSON(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!data.plans) throw new Error('invalid');
+      state = data;
+      if (!state.activePlanId && state.plans[0]) state.activePlanId = state.plans[0].id;
+      persistAndRender();
+    } catch (e) {
+      alert('올바른 JSON 파일이 아닙니다.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- Render ---------- */
+function el(tag, attrs = {}, children = []) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v === null || v === undefined) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'checked') e.checked = !!v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  }
+  for (const c of [].concat(children)) e.append(c);
+  return e;
+}
+
+function renderSidebar() {
+  const list = document.getElementById('planList');
+  list.innerHTML = '';
+  state.plans.forEach(p => {
+    const item = el('div', {
+      class: 'plan-item' + (p.id === state.activePlanId ? ' active' : ''),
+      onclick: () => selectPlan(p.id),
+    }, [
+      el('span', {}, p.name || '(이름 없음)'),
+      el('button', { class: 'del', title: '삭제', onclick: (e) => deletePlan(p.id, e) }, '✕'),
+    ]);
+    list.append(item);
+  });
+}
+
+function calcPlan(plan) {
+  const totalCost = plan.costItems.reduce((s, x) => s + (Number(x.amount) || 0), 0);
+  const totalPaid = plan.payments.filter(x => x.done).reduce((s, x) => s + (Number(x.amount) || 0), 0);
+  const totalScheduled = plan.payments.reduce((s, x) => s + (Number(x.amount) || 0), 0);
+  const totalDeposits = plan.deposits.reduce((s, x) => s + (Number(x.amount) || 0), 0);
+  const remaining = totalCost - totalPaid;
+  const balance = totalDeposits - totalPaid;
+  const progressPct = totalCost > 0 ? Math.min(100, (totalPaid / totalCost) * 100) : 0;
+  const perContributor = {};
+  plan.deposits.forEach(d => {
+    const key = d.contributor || '(미지정)';
+    perContributor[key] = (perContributor[key] || 0) + (Number(d.amount) || 0);
+  });
+  return { totalCost, totalPaid, totalScheduled, totalDeposits, remaining, balance, progressPct, perContributor };
+}
+
+function renderMain() {
+  const main = document.getElementById('main');
+  main.innerHTML = '';
+  const plan = getActivePlan();
+  if (!plan) {
+    main.append(el('div', { class: 'empty' }, '플랜이 없습니다. 왼쪽에서 "+ 새 플랜"을 눌러 시작하세요.'));
+    return;
+  }
+  const calc = calcPlan(plan);
+
+  // Header
+  const nameInput = el('input', {
+    class: 'plan-name', type: 'text', value: plan.name,
+    oninput: (e) => renamePlan(plan.id, e.target.value),
+  });
+  main.append(el('div', { class: 'plan-header' }, [nameInput]));
+
+  // Cards
+  const cards = el('div', { class: 'cards' }, [
+    el('div', { class: 'card' }, [
+      el('div', { class: 'label' }, '총 필요 금액'),
+      el('div', { class: 'value' }, won(calc.totalCost)),
+    ]),
+    el('div', { class: 'card' }, [
+      el('div', { class: 'label' }, '납부 완료'),
+      el('div', { class: 'value good' }, won(calc.totalPaid)),
+    ]),
+    el('div', { class: 'card' }, [
+      el('div', { class: 'label' }, '남은 금액'),
+      el('div', { class: 'value warn' }, won(calc.remaining)),
+    ]),
+    el('div', { class: 'card' }, [
+      el('div', { class: 'label' }, '현재 잔액 (입금 - 납부)'),
+      el('div', { class: 'value ' + (calc.balance >= 0 ? 'good' : 'bad') }, won(calc.balance)),
+    ]),
+  ]);
+  main.append(cards);
+
+  // Progress
+  main.append(el('div', { class: 'progress-wrap' }, [
+    el('div', { class: 'progress-bar' }, [
+      el('div', { class: 'progress-fill', style: `width:${calc.progressPct.toFixed(1)}%` }),
+    ]),
+    el('div', { class: 'progress-label' }, [
+      el('span', {}, `진행률 ${calc.progressPct.toFixed(1)}%`),
+      el('span', {}, `일정 총액 ${won(calc.totalScheduled)}`),
+    ]),
+  ]));
+
+  main.append(renderCostSection(plan));
+  main.append(renderPaymentSection(plan));
+  main.append(renderDepositSection(plan, calc));
+
+  main.append(el('footer', { class: 'note' },
+    '데이터는 이 브라우저의 localStorage에만 저장됩니다. 다른 기기와 공유하거나 백업하려면 "내보내기(JSON)"를 사용하세요.'));
+}
+
+function renderCostSection(plan) {
+  const rows = plan.costItems.map(item => {
+    const tr = el('tr', {}, [
+      el('td', {}, el('input', {
+        type: 'text', value: item.label, placeholder: '항목명',
+        oninput: e => updateItem('costItems', item.id, 'label', e.target.value),
+      })),
+      el('td', {}, el('input', {
+        type: 'number', value: item.amount, placeholder: '0',
+        oninput: e => updateItem('costItems', item.id, 'amount', e.target.value),
+      })),
+      el('td', { class: 'amount-cell' }, won(item.amount)),
+      el('td', { class: 'op' }, el('button', { class: 'row-del', onclick: () => removeItem('costItems', item.id) }, '✕')),
+    ]);
+    return tr;
+  });
+  const total = plan.costItems.reduce((s, x) => s + (Number(x.amount) || 0), 0);
+
+  const table = el('table', {}, [
+    el('thead', {}, el('tr', {}, [
+      el('th', {}, '항목'), el('th', {}, '금액'), el('th', {}, ''), el('th', {}, ''),
+    ])),
+    el('tbody', {}, rows.length ? rows : [el('tr', {}, el('td', { colspan: '4', class: 'empty' }, '항목이 없습니다.'))]),
+    el('tfoot', {}, el('tr', {}, [el('td', {}, '합계'), el('td', {}, won(total)), el('td', {}), el('td', {})])),
+  ]);
+
+  return el('section', { class: 'block' }, [
+    el('div', { class: 'block-head' }, [
+      el('h2', {}, '💰 비용 항목'),
+      el('button', { class: 'btn small', onclick: addCostItem }, '+ 항목 추가'),
+    ]),
+    table,
+  ]);
+}
+
+function renderPaymentSection(plan) {
+  const sorted = [...plan.payments].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const rows = sorted.map(item => {
+    const tr = el('tr', { class: item.done ? 'done' : '' }, [
+      el('td', { class: 'chk' }, el('input', {
+        type: 'checkbox', checked: item.done,
+        onchange: e => updateItem('payments', item.id, 'done', e.target.checked),
+      })),
+      el('td', {}, el('input', {
+        type: 'date', value: item.date || '',
+        oninput: e => updateItem('payments', item.id, 'date', e.target.value),
+      })),
+      el('td', {}, el('input', {
+        type: 'text', value: item.label, placeholder: '납부 항목',
+        oninput: e => updateItem('payments', item.id, 'label', e.target.value),
+      })),
+      el('td', {}, el('input', {
+        type: 'number', value: item.amount, placeholder: '0',
+        oninput: e => updateItem('payments', item.id, 'amount', e.target.value),
+      })),
+      el('td', { class: 'amount-cell' }, won(item.amount)),
+      el('td', { class: 'op' }, el('button', { class: 'row-del', onclick: () => removeItem('payments', item.id) }, '✕')),
+    ]);
+    return tr;
+  });
+  const total = plan.payments.reduce((s, x) => s + (Number(x.amount) || 0), 0);
+
+  const table = el('table', {}, [
+    el('thead', {}, el('tr', {}, [
+      el('th', {}, '완료'), el('th', {}, '날짜'), el('th', {}, '항목'), el('th', {}, '금액'), el('th', {}, ''), el('th', {}, ''),
+    ])),
+    el('tbody', {}, rows.length ? rows : [el('tr', {}, el('td', { colspan: '6', class: 'empty' }, '납부 일정이 없습니다.'))]),
+    el('tfoot', {}, el('tr', {}, [el('td', {}), el('td', {}), el('td', {}, '합계'), el('td', {}, won(total)), el('td', {}), el('td', {})])),
+  ]);
+
+  return el('section', { class: 'block' }, [
+    el('div', { class: 'block-head' }, [
+      el('h2', {}, '📅 납부 일정'),
+      el('button', { class: 'btn small', onclick: addPayment }, '+ 일정 추가'),
+    ]),
+    table,
+  ]);
+}
+
+function renderDepositSection(plan, calc) {
+  const chips = Object.entries(calc.perContributor).map(([name, amount]) =>
+    el('div', { class: 'chip' }, [name + ': ', el('b', {}, won(amount))]));
+
+  const rows = plan.deposits.map(item => {
+    const tr = el('tr', {}, [
+      el('td', {}, el('input', {
+        type: 'text', value: item.contributor, placeholder: '이름',
+        oninput: e => updateItem('deposits', item.id, 'contributor', e.target.value),
+      })),
+      el('td', {}, el('input', {
+        type: 'text', value: item.label, placeholder: '내역',
+        oninput: e => updateItem('deposits', item.id, 'label', e.target.value),
+      })),
+      el('td', {}, el('input', {
+        type: 'number', value: item.amount, placeholder: '0',
+        oninput: e => updateItem('deposits', item.id, 'amount', e.target.value),
+      })),
+      el('td', { class: 'amount-cell' }, won(item.amount)),
+      el('td', { class: 'op' }, el('button', { class: 'row-del', onclick: () => removeItem('deposits', item.id) }, '✕')),
+    ]);
+    return tr;
+  });
+  const total = plan.deposits.reduce((s, x) => s + (Number(x.amount) || 0), 0);
+
+  const table = el('table', {}, [
+    el('thead', {}, el('tr', {}, [
+      el('th', {}, '이름'), el('th', {}, '내역'), el('th', {}, '금액'), el('th', {}, ''), el('th', {}, ''),
+    ])),
+    el('tbody', {}, rows.length ? rows : [el('tr', {}, el('td', { colspan: '5', class: 'empty' }, '입금 내역이 없습니다.'))]),
+    el('tfoot', {}, el('tr', {}, [el('td', {}), el('td', {}, '합계'), el('td', {}, won(total)), el('td', {}), el('td', {})])),
+  ]);
+
+  return el('section', { class: 'block' }, [
+    el('div', { class: 'block-head' }, [
+      el('h2', {}, '🏦 입금 현황'),
+      el('button', { class: 'btn small', onclick: addDeposit }, '+ 입금 추가'),
+    ]),
+    chips.length ? el('div', { class: 'contrib-summary' }, chips) : null,
+    table,
+  ]);
+}
+
+function render() { renderSidebar(); renderMain(); }
+
+document.getElementById('addPlanBtn').addEventListener('click', addPlan);
+document.getElementById('exportBtn').addEventListener('click', exportJSON);
+document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change', (e) => {
+  if (e.target.files[0]) importJSON(e.target.files[0]);
+  e.target.value = '';
+});
+
+render();
+</script>
 </body>
 </html>
