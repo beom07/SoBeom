@@ -87,6 +87,36 @@
   .sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
   .sidebar-foot input[type=file] { display: none; }
 
+  .sync-status {
+    font-size: 0.76rem; color: var(--muted); padding: 4px 6px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .sync-status .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0;
+  }
+  .sync-status.synced .dot { background: var(--good); }
+  .sync-status.syncing .dot { background: var(--warn); }
+  .sync-status.offline .dot { background: var(--bad); }
+
+  .auth-gate {
+    position: fixed; inset: 0; background: rgba(4, 8, 20, 0.88);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; padding: 20px;
+  }
+  .auth-box {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 28px 26px; max-width: 340px; width: 100%; text-align: center;
+  }
+  .auth-box h2 { margin: 0 0 10px; }
+  .auth-box p { color: var(--muted); font-size: 0.88rem; margin: 0 0 16px; line-height: 1.5; }
+  .auth-box input {
+    width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--panel-2); color: var(--text); font-size: 0.95rem; margin-bottom: 12px;
+    box-sizing: border-box;
+  }
+  .auth-box .btn { width: 100%; }
+  .auth-err { color: var(--bad); min-height: 1.2em; margin: 10px 0 0 !important; }
+
   /* Main */
   .main { flex: 1; padding: 28px 36px 60px; max-width: 1100px; }
   .plan-header { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; }
@@ -177,13 +207,25 @@
     <div class="plan-list" id="planList"></div>
     <button class="btn primary small" id="addPlanBtn">+ 새 플랜</button>
     <div class="sidebar-foot">
+      <div class="sync-status" id="syncStatus">–</div>
       <button class="btn small" id="exportBtn">내보내기 (Excel)</button>
       <button class="btn small" id="importBtn">가져오기 (Excel)</button>
       <input type="file" id="importFile" accept=".xlsx,.xls">
+      <button class="btn small ghost" id="resetPasscodeBtn">🔑 비밀번호 재설정</button>
     </div>
   </aside>
 
   <main class="main" id="main"></main>
+</div>
+
+<div id="authGate" class="auth-gate" style="display:none">
+  <div class="auth-box">
+    <h2>🔒 접근 비밀번호</h2>
+    <p>이 플랜은 공유 비밀번호로 보호되어 있습니다. 알고 있는 비밀번호를 입력하세요.</p>
+    <input id="authInput" type="password" placeholder="비밀번호" autocomplete="off">
+    <button id="authSubmit" class="btn primary">확인</button>
+    <p class="auth-err" id="authErr"></p>
+  </div>
 </div>
 
 <script>
@@ -224,18 +266,124 @@ function seedData() {
   };
 }
 
-function load() {
+function loadLocalCache() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch (e) { console.error(e); }
-  const seed = seedData();
-  save(seed);
-  return seed;
+  return null;
 }
-function save(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
 
-let state = load();
+let syncTimer = null;
+function save(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  scheduleSync();
+}
+
+let state = loadLocalCache() || seedData();
+
+/* ---------- Server sync (Netlify Function + Blobs) ---------- */
+const API_URL = '/.netlify/functions/plans';
+const PASSCODE_KEY = 'plan_passcode';
+const getPasscode = () => localStorage.getItem(PASSCODE_KEY) || '';
+const setPasscode = v => localStorage.setItem(PASSCODE_KEY, v);
+const clearPasscode = () => localStorage.removeItem(PASSCODE_KEY);
+
+function setSyncStatus(kind, text) {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  el.className = 'sync-status ' + kind;
+  const labels = { synced: '동기화됨', syncing: '동기화 중...', offline: text || '오프라인 (이 기기에만 저장)' };
+  el.innerHTML = '<span class="dot"></span>' + (labels[kind] || text || '');
+}
+
+async function serverLoad() {
+  const res = await fetch(API_URL, { headers: { 'x-plan-passcode': getPasscode() } });
+  if (res.status === 401) { const e = new Error('unauthorized'); e.code = 401; throw e; }
+  if (!res.ok) { const e = new Error('server error ' + res.status); e.code = res.status; throw e; }
+  const json = await res.json();
+  return json.data;
+}
+async function serverSave(data) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-plan-passcode': getPasscode() },
+    body: JSON.stringify(data),
+  });
+  if (res.status === 401) { const e = new Error('unauthorized'); e.code = 401; throw e; }
+  if (!res.ok) throw new Error('save failed ' + res.status);
+}
+
+function scheduleSync() {
+  clearTimeout(syncTimer);
+  setSyncStatus('syncing');
+  syncTimer = setTimeout(async () => {
+    try {
+      await serverSave(state);
+      setSyncStatus('synced');
+    } catch (e) {
+      if (e.code === 401) {
+        clearPasscode();
+        setSyncStatus('offline', '비밀번호 오류 - 재설정 필요');
+      } else {
+        setSyncStatus('offline', '동기화 실패 (이 기기에만 저장됨)');
+      }
+    }
+  }, 700);
+}
+
+function promptPasscode(errMsg) {
+  return new Promise(resolve => {
+    const gate = document.getElementById('authGate');
+    const input = document.getElementById('authInput');
+    const submitBtn = document.getElementById('authSubmit');
+    const err = document.getElementById('authErr');
+    err.textContent = errMsg || '';
+    gate.style.display = 'flex';
+    input.value = '';
+    input.focus();
+    const onSubmit = () => {
+      const v = input.value.trim();
+      if (!v) return;
+      setPasscode(v);
+      gate.style.display = 'none';
+      submitBtn.removeEventListener('click', onSubmit);
+      input.removeEventListener('keydown', onKey);
+      resolve();
+    };
+    const onKey = e => { if (e.key === 'Enter') onSubmit(); };
+    submitBtn.addEventListener('click', onSubmit);
+    input.addEventListener('keydown', onKey);
+  });
+}
+
+async function trySync() {
+  if (!getPasscode()) await promptPasscode();
+  setSyncStatus('syncing');
+  try {
+    const serverData = await serverLoad();
+    if (serverData) {
+      state = serverData;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } else {
+      await serverSave(state);
+    }
+    setSyncStatus('synced');
+    render();
+  } catch (e) {
+    if (e.code === 401) {
+      clearPasscode();
+      await promptPasscode('비밀번호가 올바르지 않습니다. 다시 입력하세요.');
+      return trySync();
+    }
+    setSyncStatus('offline', '서버에 연결할 수 없어 이 기기에만 저장됩니다');
+  }
+}
+
+function resetPasscode() {
+  clearPasscode();
+  trySync();
+}
 
 function getActivePlan() {
   return state.plans.find(p => p.id === state.activePlanId) || state.plans[0];
@@ -480,7 +628,7 @@ function renderMain() {
   main.append(renderDepositSection(plan, calc));
 
   main.append(el('footer', { class: 'note' },
-    '데이터는 이 브라우저의 localStorage에만 저장됩니다. 다른 기기와 공유하거나 백업하려면 "내보내기(Excel)"를 사용하세요.'));
+    '비밀번호를 아는 사람끼리 서버를 통해 데이터가 자동 동기화됩니다. 별도 백업이 필요하면 "내보내기(Excel)"를 사용하세요.'));
 }
 
 function renderCostSection(plan) {
@@ -614,8 +762,10 @@ document.getElementById('importFile').addEventListener('change', (e) => {
   if (e.target.files[0]) importExcel(e.target.files[0]);
   e.target.value = '';
 });
+document.getElementById('resetPasscodeBtn').addEventListener('click', resetPasscode);
 
 render();
+trySync();
 </script>
 </body>
 </html>

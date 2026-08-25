@@ -1,0 +1,7 @@
+{
+  "name": "myplans-site",
+  "private": true,
+  "dependencies": {
+    "@netlify/blobs": "latest"
+  }
+}
