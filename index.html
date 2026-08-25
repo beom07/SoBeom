@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>내 플랜</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
     --bg: #0f172a;
@@ -176,9 +177,9 @@
     <div class="plan-list" id="planList"></div>
     <button class="btn primary small" id="addPlanBtn">+ 새 플랜</button>
     <div class="sidebar-foot">
-      <button class="btn small" id="exportBtn">내보내기 (JSON)</button>
-      <button class="btn small" id="importBtn">가져오기 (JSON)</button>
-      <input type="file" id="importFile" accept="application/json">
+      <button class="btn small" id="exportBtn">내보내기 (Excel)</button>
+      <button class="btn small" id="importBtn">가져오기 (Excel)</button>
+      <input type="file" id="importFile" accept=".xlsx,.xls">
     </div>
   </aside>
 
@@ -292,29 +293,92 @@ function updateItem(arr, id, field, value) {
   renderMain();
 }
 
-function exportJSON() {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'myplans-export.json';
-  a.click();
-  URL.revokeObjectURL(url);
+function normalizeDate(v) {
+  if (v === undefined || v === null || v === '') return '';
+  if (v instanceof Date) {
+    const mm = String(v.getMonth() + 1).padStart(2, '0');
+    const dd = String(v.getDate()).padStart(2, '0');
+    return `${v.getFullYear()}-${mm}-${dd}`;
+  }
+  if (typeof v === 'number' && window.XLSX && XLSX.SSF) {
+    const d = XLSX.SSF.parse_date_code(v);
+    if (d) return `${d.y}-${String(d.m).padStart(2, '0')}-${String(d.d).padStart(2, '0')}`;
+  }
+  const s = String(v).trim();
+  const m = s.match(/(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);
+  if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  return s;
 }
-function importJSON(file) {
+function isDoneValue(v) {
+  if (v === true) return true;
+  if (v === undefined || v === null) return false;
+  const s = String(v).trim().toLowerCase();
+  return ['예', 'o', 'v', 'true', '1', '완료', 'y', 'yes'].includes(s);
+}
+
+function exportExcel() {
+  const wb = XLSX.utils.book_new();
+  const planListRows = state.plans.map(p => ({ 플랜명: p.name }));
+  const costRows = [];
+  const paymentRows = [];
+  const depositRows = [];
+  state.plans.forEach(p => {
+    p.costItems.forEach(c => costRows.push({ 플랜명: p.name, 항목: c.label, 금액: c.amount }));
+    p.payments.forEach(pay => paymentRows.push({ 플랜명: p.name, 완료: pay.done ? '예' : '', 날짜: pay.date || '', 항목: pay.label, 금액: pay.amount }));
+    p.deposits.forEach(d => depositRows.push({ 플랜명: p.name, 이름: d.contributor, 내역: d.label, 금액: d.amount }));
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(planListRows), '플랜목록');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(costRows), '비용항목');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(paymentRows), '납부일정');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(depositRows), '입금현황');
+  XLSX.writeFile(wb, 'myplans-export.xlsx');
+}
+
+function importExcel(file) {
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      const data = JSON.parse(reader.result);
-      if (!data.plans) throw new Error('invalid');
-      state = data;
-      if (!state.activePlanId && state.plans[0]) state.activePlanId = state.plans[0].id;
+      const wb = XLSX.read(new Uint8Array(reader.result), { type: 'array', cellDates: true });
+      const sheet = name => wb.Sheets[name] ? XLSX.utils.sheet_to_json(wb.Sheets[name]) : [];
+      const planListRows = sheet('플랜목록');
+      const costRows = sheet('비용항목');
+      const paymentRows = sheet('납부일정');
+      const depositRows = sheet('입금현황');
+      if (!planListRows.length && !costRows.length && !paymentRows.length && !depositRows.length) {
+        throw new Error('empty');
+      }
+
+      const planNames = [];
+      const addName = name => { if (name && !planNames.includes(name)) planNames.push(name); };
+      planListRows.forEach(r => addName(r['플랜명']));
+      costRows.forEach(r => addName(r['플랜명']));
+      paymentRows.forEach(r => addName(r['플랜명']));
+      depositRows.forEach(r => addName(r['플랜명']));
+
+      const plans = planNames.map(name => ({
+        id: uid(),
+        name,
+        costItems: costRows.filter(r => r['플랜명'] === name).map(r => ({
+          id: uid(), label: r['항목'] || '', amount: Number(r['금액']) || 0,
+        })),
+        payments: paymentRows.filter(r => r['플랜명'] === name).map(r => ({
+          id: uid(), date: normalizeDate(r['날짜']), label: r['항목'] || '',
+          amount: Number(r['금액']) || 0, done: isDoneValue(r['완료']),
+        })),
+        deposits: depositRows.filter(r => r['플랜명'] === name).map(r => ({
+          id: uid(), contributor: r['이름'] || '', label: r['내역'] || '', amount: Number(r['금액']) || 0,
+        })),
+      }));
+
+      if (!plans.length) throw new Error('no plans');
+      state = { version: 1, activePlanId: plans[0].id, plans };
       persistAndRender();
     } catch (e) {
-      alert('올바른 JSON 파일이 아닙니다.');
+      console.error(e);
+      alert('엑셀 파일을 읽는 중 문제가 발생했습니다. "내보내기(Excel)"로 받은 형식과 같은 파일인지 확인해주세요.');
     }
   };
-  reader.readAsText(file);
+  reader.readAsArrayBuffer(file);
 }
 
 /* ---------- Render ---------- */
@@ -416,7 +480,7 @@ function renderMain() {
   main.append(renderDepositSection(plan, calc));
 
   main.append(el('footer', { class: 'note' },
-    '데이터는 이 브라우저의 localStorage에만 저장됩니다. 다른 기기와 공유하거나 백업하려면 "내보내기(JSON)"를 사용하세요.'));
+    '데이터는 이 브라우저의 localStorage에만 저장됩니다. 다른 기기와 공유하거나 백업하려면 "내보내기(Excel)"를 사용하세요.'));
 }
 
 function renderCostSection(plan) {
@@ -544,10 +608,10 @@ function renderDepositSection(plan, calc) {
 function render() { renderSidebar(); renderMain(); }
 
 document.getElementById('addPlanBtn').addEventListener('click', addPlan);
-document.getElementById('exportBtn').addEventListener('click', exportJSON);
+document.getElementById('exportBtn').addEventListener('click', exportExcel);
 document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
 document.getElementById('importFile').addEventListener('change', (e) => {
-  if (e.target.files[0]) importJSON(e.target.files[0]);
+  if (e.target.files[0]) importExcel(e.target.files[0]);
   e.target.value = '';
 });
 
