@@ -3,93 +3,120 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>내 플랜</title>
+<title>소범 사이트</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0f172a;
-    --panel: #16213b;
-    --panel-2: #1c2b4a;
-    --border: #2a3a5c;
-    --text: #f8fafc;
-    --muted: #94a3b8;
-    --accent: #38bdf8;
-    --accent-2: #818cf8;
-    --good: #34d399;
-    --warn: #fbbf24;
-    --bad: #f87171;
-    --radius: 12px;
+    --bg: #faf5ee;
+    --paper: #fffdfa;
+    --panel: #ffffff;
+    --panel-2: #fbeee1;
+    --border: #ecdfce;
+    --text: #4a3f33;
+    --muted: #a5967e;
+    --accent: #e0795c;
+    --accent-soft: #f6d9c9;
+    --sage: #8faa8b;
+    --sage-soft: #dfe9dc;
+    --lavender: #9b8bb4;
+    --lavender-soft: #e6e0f0;
+    --good: #6f9d6f;
+    --warn: #d69a4c;
+    --bad: #cc6b5c;
+    --radius: 18px;
+    --radius-sm: 12px;
+    --font-head: 'Gowun Batang', 'Nanum Myeongjo', serif;
+    --font-body: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
     min-height: 100vh;
-    background: var(--bg);
+    background:
+      radial-gradient(circle, rgba(224,121,92,0.10) 1px, transparent 1px) 0 0/22px 22px,
+      var(--bg);
     color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    font-family: var(--font-body);
   }
   a { color: var(--accent); }
-  .app { display: flex; min-height: 100vh; }
+  .app { display: flex; min-height: 100vh; align-items: flex-start; }
 
   /* Sidebar */
   .sidebar {
-    width: 240px;
+    width: 250px;
     flex-shrink: 0;
-    background: var(--panel);
-    border-right: 1px solid var(--border);
-    padding: 20px 14px;
+    min-height: 100vh;
+    background: var(--paper);
+    border-right: 2px dashed var(--border);
+    padding: 26px 16px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
   }
-  .sidebar h1 {
-    font-size: 1.1rem;
-    margin: 4px 6px 12px;
+  .brand { padding: 2px 8px 14px; }
+  .brand .emoji { font-size: 1.8rem; display: block; margin-bottom: 4px; }
+  .brand h1 {
+    font-family: var(--font-head);
+    font-size: 1.4rem;
+    margin: 0;
+    color: var(--text);
   }
-  .plan-list { display: flex; flex-direction: column; gap: 6px; }
+  .brand .sub { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+  .plan-list { display: flex; flex-direction: column; gap: 8px; }
   .plan-item {
-    padding: 10px 12px;
-    border-radius: 8px;
+    padding: 11px 14px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
     font-size: 0.92rem;
-    color: var(--muted);
+    font-weight: 600;
+    color: var(--text);
+    background: var(--panel);
+    border: 2px solid var(--border);
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 6px;
+    transition: transform .12s, border-color .12s;
   }
-  .plan-item:hover { background: var(--panel-2); }
-  .plan-item.active { background: var(--accent); color: #04121f; font-weight: 600; }
+  .plan-item:hover { border-color: var(--accent-soft); transform: translateX(2px); }
+  .plan-item.active { background: var(--accent); color: #fff; border-color: var(--accent); }
   .plan-item .del {
     opacity: 0;
     background: none; border: none; color: inherit; cursor: pointer;
-    font-size: 0.85rem; padding: 2px 4px;
+    font-size: 0.85rem; padding: 2px 4px; line-height: 1;
   }
-  .plan-item:hover .del { opacity: 0.6; }
+  .plan-item:hover .del { opacity: 0.55; }
   .plan-item .del:hover { opacity: 1; }
 
   .btn {
-    background: var(--panel-2);
+    background: var(--panel);
     color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 9px 14px;
+    border: 2px solid var(--border);
+    border-radius: 999px;
+    padding: 9px 16px;
     cursor: pointer;
-    font-size: 0.88rem;
+    font-size: 0.86rem;
+    font-weight: 700;
+    font-family: var(--font-body);
   }
-  .btn:hover { border-color: var(--accent); }
-  .btn.primary { background: var(--accent); color: #04121f; border: none; font-weight: 600; }
-  .btn.primary:hover { filter: brightness(1.08); }
-  .btn.ghost { background: transparent; }
-  .btn.small { padding: 5px 10px; font-size: 0.8rem; }
-  .btn.danger:hover { border-color: var(--bad); color: var(--bad); }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary:hover { filter: brightness(1.06); color: #fff; }
+  .btn.ghost { background: transparent; border-color: transparent; }
+  .btn.ghost:hover { border-color: var(--border); }
+  .btn.small { padding: 6px 12px; font-size: 0.78rem; }
+  .btn.full { width: 100%; }
 
-  .sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+  .sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 2px dashed var(--border); }
   .sidebar-foot input[type=file] { display: none; }
 
   .sync-status {
-    font-size: 0.76rem; color: var(--muted); padding: 4px 6px;
-    display: flex; align-items: center; gap: 6px;
+    font-size: 0.75rem; color: var(--muted); padding: 2px 8px 6px;
+    display: flex; align-items: center; gap: 6px; font-weight: 600;
   }
   .sync-status .dot {
     width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0;
@@ -99,119 +126,165 @@
   .sync-status.offline .dot { background: var(--bad); }
 
   .auth-gate {
-    position: fixed; inset: 0; background: rgba(4, 8, 20, 0.88);
+    position: fixed; inset: 0; background: rgba(74, 63, 51, 0.55);
     display: flex; align-items: center; justify-content: center;
     z-index: 100; padding: 20px;
   }
   .auth-box {
-    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 28px 26px; max-width: 340px; width: 100%; text-align: center;
+    background: var(--paper); border: 2px solid var(--border); border-radius: var(--radius);
+    padding: 30px 28px; max-width: 340px; width: 100%; text-align: center;
+    box-shadow: 0 18px 40px rgba(74,63,51,0.18);
   }
-  .auth-box h2 { margin: 0 0 10px; }
+  .auth-box h2 { margin: 0 0 10px; font-family: var(--font-head); }
   .auth-box p { color: var(--muted); font-size: 0.88rem; margin: 0 0 16px; line-height: 1.5; }
   .auth-box input {
-    width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--panel-2); color: var(--text); font-size: 0.95rem; margin-bottom: 12px;
-    box-sizing: border-box;
+    width: 100%; padding: 11px 14px; border-radius: 999px; border: 2px solid var(--border);
+    background: var(--panel); color: var(--text); font-size: 0.95rem; margin-bottom: 14px;
+    box-sizing: border-box; text-align: center; font-family: var(--font-body);
   }
+  .auth-box input:focus { outline: none; border-color: var(--accent); }
   .auth-box .btn { width: 100%; }
-  .auth-err { color: var(--bad); min-height: 1.2em; margin: 10px 0 0 !important; }
+  .auth-err { color: var(--bad); min-height: 1.2em; margin: 10px 0 0 !important; font-size: 0.82rem; }
 
   /* Main */
-  .main { flex: 1; padding: 28px 36px 60px; max-width: 1100px; }
-  .plan-header { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; }
+  .main { flex: 1; padding: 30px 40px 70px; max-width: 980px; }
+  .plan-header { margin-bottom: 24px; }
+  .plan-header .kicker { font-size: 0.78rem; color: var(--muted); font-weight: 700; letter-spacing: .04em; margin-bottom: 4px; }
   .plan-header input.plan-name {
     background: transparent; border: none; color: var(--text);
-    font-size: 1.6rem; font-weight: 700; outline: none;
-    border-bottom: 2px solid transparent;
-    padding: 2px 4px;
-    min-width: 120px;
+    font-family: var(--font-head);
+    font-size: 2.1rem; font-weight: 700; outline: none;
+    border-bottom: 3px solid transparent;
+    padding: 2px 2px 4px;
+    width: 100%;
   }
   .plan-header input.plan-name:focus { border-bottom-color: var(--accent); }
 
-  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 26px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 22px; }
   .card {
     background: var(--panel);
-    border: 1px solid var(--border);
+    border: 2px solid var(--border);
     border-radius: var(--radius);
     padding: 16px 18px;
   }
-  .card .label { color: var(--muted); font-size: 0.8rem; margin-bottom: 6px; }
-  .card .value { font-size: 1.35rem; font-weight: 700; }
+  .card .label { color: var(--muted); font-size: 0.78rem; font-weight: 700; margin-bottom: 6px; }
+  .card .value { font-size: 1.4rem; font-weight: 800; font-family: var(--font-head); }
   .card .value.good { color: var(--good); }
   .card .value.warn { color: var(--warn); }
   .card .value.bad { color: var(--bad); }
 
-  .progress-wrap { margin-bottom: 30px; }
+  .progress-wrap {
+    margin-bottom: 30px; background: var(--panel); border: 2px solid var(--border);
+    border-radius: var(--radius); padding: 16px 20px;
+  }
+  .progress-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .progress-top .pct { font-family: var(--font-head); font-size: 1.3rem; font-weight: 700; color: var(--accent); }
+  .progress-top .sched { font-size: 0.8rem; color: var(--muted); }
   .progress-bar {
-    height: 10px; border-radius: 6px; background: var(--panel-2);
+    height: 12px; border-radius: 999px; background: var(--panel-2);
     overflow: hidden; border: 1px solid var(--border);
   }
-  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--good)); transition: width .3s; }
-  .progress-label { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.8rem; color: var(--muted); }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--warn)); transition: width .3s; border-radius: 999px; }
 
-  section.block { margin-bottom: 34px; }
-  .block-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .block-head h2 { font-size: 1.05rem; margin: 0; }
+  section.block { margin-bottom: 32px; }
+  .block-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .block-head h2 { font-family: var(--font-head); font-size: 1.2rem; margin: 0; display: flex; align-items: center; gap: 8px; }
 
-  table { width: 100%; border-collapse: collapse; background: var(--panel); border-radius: var(--radius); overflow: hidden; }
-  thead th {
-    text-align: left; font-size: 0.78rem; color: var(--muted); font-weight: 600;
-    padding: 10px 12px; background: var(--panel-2); border-bottom: 1px solid var(--border);
+  /* item list (cost items & deposits) */
+  .item-list { display: flex; flex-direction: column; gap: 8px; }
+  .item-row {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--panel); border: 2px solid var(--border); border-radius: var(--radius-sm);
+    padding: 8px 10px 8px 14px;
   }
-  tbody td { padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-  tbody tr:last-child td { border-bottom: none; }
-  tbody tr:hover { background: rgba(255,255,255,0.02); }
-  td input[type=text], td input[type=number], td input[type=date], td select {
-    width: 100%; background: transparent; border: 1px solid transparent; border-radius: 6px;
-    color: var(--text); padding: 6px 8px; font-size: 0.9rem; font-family: inherit;
+  .item-row input[type=text] { flex: 1; min-width: 0; }
+  .item-row input[type=number] { width: 150px; text-align: right; }
+  .item-row .amt-display { width: 120px; text-align: right; color: var(--muted); font-size: 0.78rem; flex-shrink: 0; }
+
+  input[type=text], input[type=number], input[type=date] {
+    background: transparent; border: 1px solid transparent; border-radius: 8px;
+    color: var(--text); padding: 7px 9px; font-size: 0.92rem; font-family: var(--font-body);
   }
-  td input:hover, td select:hover { border-color: var(--border); }
-  td input:focus, td select:focus { border-color: var(--accent); outline: none; background: var(--panel-2); }
-  td input[type=number] { text-align: right; }
-  td.amount-cell { text-align: right; white-space: nowrap; color: var(--muted); font-size: 0.78rem; }
-  td.chk { text-align: center; width: 40px; }
-  td.op { width: 34px; text-align: center; }
-  input[type=checkbox] { width: 17px; height: 17px; cursor: pointer; accent-color: var(--good); }
-  .row-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.95rem; }
-  .row-del:hover { color: var(--bad); }
-  tr.done td { color: var(--muted); }
-  tr.done td input { color: var(--muted); text-decoration: line-through; }
-
-  tfoot td { padding: 10px 12px; font-weight: 700; border-top: 1px solid var(--border); }
-  .add-row { padding: 10px 12px; }
-
-  .contrib-summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
-  .chip {
-    padding: 6px 12px; border-radius: 999px; background: var(--panel-2);
-    border: 1px solid var(--border); font-size: 0.82rem;
+  input[type=text]:hover, input[type=number]:hover, input[type=date]:hover { border-color: var(--border); }
+  input[type=text]:focus, input[type=number]:focus, input[type=date]:focus {
+    border-color: var(--accent); outline: none; background: var(--panel-2);
   }
-  .chip b { color: var(--accent); }
+  .row-del {
+    background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1rem;
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  }
+  .row-del:hover { color: #fff; background: var(--bad); }
 
-  .empty { color: var(--muted); text-align: center; padding: 40px 10px; }
-  footer.note { color: var(--muted); font-size: 0.78rem; margin-top: 40px; line-height: 1.6; }
+  .list-total {
+    display: flex; justify-content: space-between; padding: 10px 14px;
+    font-weight: 800; font-family: var(--font-head); font-size: 1.05rem;
+    border-top: 2px dashed var(--border); margin-top: 4px;
+  }
+
+  /* timeline (payments) */
+  .timeline { display: flex; flex-direction: column; }
+  .tl-item { display: flex; gap: 14px; }
+  .tl-marker { display: flex; flex-direction: column; align-items: center; width: 26px; flex-shrink: 0; }
+  .tl-dot {
+    width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--border);
+    background: var(--panel); flex-shrink: 0; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; color: transparent; font-size: 0.7rem;
+    font-weight: 900; margin-top: 8px;
+  }
+  .tl-item.done .tl-dot { background: var(--good); border-color: var(--good); color: #fff; }
+  .tl-line { width: 2px; flex: 1; background: var(--border); margin: 2px 0; min-height: 8px; }
+  .tl-item:last-child .tl-line { display: none; }
+  .tl-content {
+    flex: 1; background: var(--panel); border: 2px solid var(--border); border-radius: var(--radius-sm);
+    padding: 12px 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .tl-item.done .tl-content { background: var(--sage-soft); border-color: var(--sage); }
+  .tl-item.done .tl-content input { color: var(--good); }
+  .tl-content input[type=date] { width: 140px; flex-shrink: 0; font-weight: 700; }
+  .tl-content input[type=text] { flex: 1; min-width: 100px; }
+  .tl-content input[type=number] { width: 130px; text-align: right; flex-shrink: 0; }
+  .tl-content .amt-display { width: 110px; text-align: right; color: var(--muted); font-size: 0.76rem; flex-shrink: 0; }
+
+  /* deposits grouped by contributor */
+  .contrib-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .contrib-card { background: var(--panel); border: 2px solid var(--border); border-radius: var(--radius); padding: 14px; }
+  .contrib-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 4px; }
+  .contrib-head .name { font-family: var(--font-head); font-weight: 700; font-size: 1.05rem; }
+  .contrib-head .total { font-weight: 800; color: var(--lavender); }
+
+  .empty { color: var(--muted); text-align: center; padding: 30px 10px; font-size: 0.9rem; }
+  footer.note {
+    color: var(--muted); font-size: 0.8rem; margin-top: 40px; line-height: 1.6;
+    background: var(--panel-2); border-radius: var(--radius-sm); padding: 12px 16px;
+  }
 
   @media (max-width: 720px) {
     .app { flex-direction: column; }
-    .sidebar { width: 100%; flex-direction: row; overflow-x: auto; }
+    .sidebar { width: 100%; min-height: auto; flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 2px dashed var(--border); align-items: center; }
+    .brand { padding: 0 10px 0 0; }
     .plan-list { flex-direction: row; }
-    .sidebar-foot { flex-direction: row; margin-top: 0; }
-    .main { padding: 20px; }
+    .sidebar-foot { flex-direction: row; margin-top: 0; border-top: none; padding-top: 0; }
+    .main { padding: 22px 18px; }
+    .plan-header input.plan-name { font-size: 1.6rem; }
   }
 </style>
 </head>
 <body>
 <div class="app">
   <aside class="sidebar">
-    <h1>📋 내 플랜</h1>
+    <div class="brand">
+      <span class="emoji">🏡</span>
+      <h1>소범 사이트</h1>
+      <div class="sub">우리의 플랜 다이어리</div>
+    </div>
     <div class="plan-list" id="planList"></div>
-    <button class="btn primary small" id="addPlanBtn">+ 새 플랜</button>
+    <button class="btn primary small full" id="addPlanBtn">+ 새 플랜</button>
     <div class="sidebar-foot">
       <div class="sync-status" id="syncStatus">–</div>
-      <button class="btn small" id="exportBtn">내보내기 (Excel)</button>
-      <button class="btn small" id="importBtn">가져오기 (Excel)</button>
+      <button class="btn small full" id="exportBtn">내보내기 (Excel)</button>
+      <button class="btn small full" id="importBtn">가져오기 (Excel)</button>
       <input type="file" id="importFile" accept=".xlsx,.xls">
-      <button class="btn small ghost" id="resetPasscodeBtn">🔑 비밀번호 재설정</button>
+      <button class="btn small ghost full" id="resetPasscodeBtn">🔑 비밀번호 재설정</button>
     </div>
   </aside>
 
@@ -589,7 +662,10 @@ function renderMain() {
     class: 'plan-name', type: 'text', value: plan.name,
     oninput: (e) => renamePlan(plan.id, e.target.value),
   });
-  main.append(el('div', { class: 'plan-header' }, [nameInput]));
+  main.append(el('div', { class: 'plan-header' }, [
+    el('div', { class: 'kicker' }, '📖 나의 플랜'),
+    nameInput,
+  ]));
 
   // Cards
   const cards = el('div', { class: 'cards' }, [
@@ -614,12 +690,12 @@ function renderMain() {
 
   // Progress
   main.append(el('div', { class: 'progress-wrap' }, [
+    el('div', { class: 'progress-top' }, [
+      el('span', { class: 'pct' }, `진행률 ${calc.progressPct.toFixed(1)}%`),
+      el('span', { class: 'sched' }, `일정 총액 ${won(calc.totalScheduled)}`),
+    ]),
     el('div', { class: 'progress-bar' }, [
       el('div', { class: 'progress-fill', style: `width:${calc.progressPct.toFixed(1)}%` }),
-    ]),
-    el('div', { class: 'progress-label' }, [
-      el('span', {}, `진행률 ${calc.progressPct.toFixed(1)}%`),
-      el('span', {}, `일정 총액 ${won(calc.totalScheduled)}`),
     ]),
   ]));
 
@@ -632,124 +708,119 @@ function renderMain() {
 }
 
 function renderCostSection(plan) {
-  const rows = plan.costItems.map(item => {
-    const tr = el('tr', {}, [
-      el('td', {}, el('input', {
-        type: 'text', value: item.label, placeholder: '항목명',
-        oninput: e => updateItem('costItems', item.id, 'label', e.target.value),
-      })),
-      el('td', {}, el('input', {
-        type: 'number', value: item.amount, placeholder: '0',
-        oninput: e => updateItem('costItems', item.id, 'amount', e.target.value),
-      })),
-      el('td', { class: 'amount-cell' }, won(item.amount)),
-      el('td', { class: 'op' }, el('button', { class: 'row-del', onclick: () => removeItem('costItems', item.id) }, '✕')),
-    ]);
-    return tr;
-  });
+  const rows = plan.costItems.map(item => el('div', { class: 'item-row' }, [
+    el('input', {
+      type: 'text', value: item.label, placeholder: '항목명',
+      oninput: e => updateItem('costItems', item.id, 'label', e.target.value),
+    }),
+    el('input', {
+      type: 'number', value: item.amount, placeholder: '0',
+      oninput: e => updateItem('costItems', item.id, 'amount', e.target.value),
+    }),
+    el('span', { class: 'amt-display' }, won(item.amount)),
+    el('button', { class: 'row-del', onclick: () => removeItem('costItems', item.id) }, '✕'),
+  ]));
   const total = plan.costItems.reduce((s, x) => s + (Number(x.amount) || 0), 0);
-
-  const table = el('table', {}, [
-    el('thead', {}, el('tr', {}, [
-      el('th', {}, '항목'), el('th', {}, '금액'), el('th', {}, ''), el('th', {}, ''),
-    ])),
-    el('tbody', {}, rows.length ? rows : [el('tr', {}, el('td', { colspan: '4', class: 'empty' }, '항목이 없습니다.'))]),
-    el('tfoot', {}, el('tr', {}, [el('td', {}, '합계'), el('td', {}, won(total)), el('td', {}), el('td', {})])),
-  ]);
 
   return el('section', { class: 'block' }, [
     el('div', { class: 'block-head' }, [
       el('h2', {}, '💰 비용 항목'),
       el('button', { class: 'btn small', onclick: addCostItem }, '+ 항목 추가'),
     ]),
-    table,
+    el('div', { class: 'item-list' },
+      rows.length ? rows : [el('div', { class: 'empty' }, '항목이 없습니다.')]),
+    el('div', { class: 'list-total' }, [el('span', {}, '합계'), el('span', {}, won(total))]),
   ]);
 }
 
 function renderPaymentSection(plan) {
   const sorted = [...plan.payments].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-  const rows = sorted.map(item => {
-    const tr = el('tr', { class: item.done ? 'done' : '' }, [
-      el('td', { class: 'chk' }, el('input', {
-        type: 'checkbox', checked: item.done,
-        onchange: e => updateItem('payments', item.id, 'done', e.target.checked),
-      })),
-      el('td', {}, el('input', {
+  const items = sorted.map(item => el('div', { class: 'tl-item' + (item.done ? ' done' : '') }, [
+    el('div', { class: 'tl-marker' }, [
+      el('button', {
+        class: 'tl-dot',
+        title: item.done ? '완료 취소' : '완료로 표시',
+        onclick: () => updateItem('payments', item.id, 'done', !item.done),
+      }, item.done ? '✓' : ''),
+      el('div', { class: 'tl-line' }),
+    ]),
+    el('div', { class: 'tl-content' }, [
+      el('input', {
         type: 'date', value: item.date || '',
         oninput: e => updateItem('payments', item.id, 'date', e.target.value),
-      })),
-      el('td', {}, el('input', {
+      }),
+      el('input', {
         type: 'text', value: item.label, placeholder: '납부 항목',
         oninput: e => updateItem('payments', item.id, 'label', e.target.value),
-      })),
-      el('td', {}, el('input', {
+      }),
+      el('input', {
         type: 'number', value: item.amount, placeholder: '0',
         oninput: e => updateItem('payments', item.id, 'amount', e.target.value),
-      })),
-      el('td', { class: 'amount-cell' }, won(item.amount)),
-      el('td', { class: 'op' }, el('button', { class: 'row-del', onclick: () => removeItem('payments', item.id) }, '✕')),
-    ]);
-    return tr;
-  });
+      }),
+      el('span', { class: 'amt-display' }, won(item.amount)),
+      el('button', { class: 'row-del', onclick: () => removeItem('payments', item.id) }, '✕'),
+    ]),
+  ]));
   const total = plan.payments.reduce((s, x) => s + (Number(x.amount) || 0), 0);
-
-  const table = el('table', {}, [
-    el('thead', {}, el('tr', {}, [
-      el('th', {}, '완료'), el('th', {}, '날짜'), el('th', {}, '항목'), el('th', {}, '금액'), el('th', {}, ''), el('th', {}, ''),
-    ])),
-    el('tbody', {}, rows.length ? rows : [el('tr', {}, el('td', { colspan: '6', class: 'empty' }, '납부 일정이 없습니다.'))]),
-    el('tfoot', {}, el('tr', {}, [el('td', {}), el('td', {}), el('td', {}, '합계'), el('td', {}, won(total)), el('td', {}), el('td', {})])),
-  ]);
 
   return el('section', { class: 'block' }, [
     el('div', { class: 'block-head' }, [
       el('h2', {}, '📅 납부 일정'),
       el('button', { class: 'btn small', onclick: addPayment }, '+ 일정 추가'),
     ]),
-    table,
+    el('div', { class: 'timeline' },
+      items.length ? items : [el('div', { class: 'empty' }, '납부 일정이 없습니다.')]),
+    el('div', { class: 'list-total' }, [el('span', {}, '합계'), el('span', {}, won(total))]),
   ]);
 }
 
 function renderDepositSection(plan, calc) {
-  const chips = Object.entries(calc.perContributor).map(([name, amount]) =>
-    el('div', { class: 'chip' }, [name + ': ', el('b', {}, won(amount))]));
+  const groups = {};
+  const order = [];
+  plan.deposits.forEach(d => {
+    const key = d.contributor && d.contributor.trim() ? d.contributor : '(이름 미입력)';
+    if (!groups[key]) { groups[key] = []; order.push(key); }
+    groups[key].push(d);
+  });
 
-  const rows = plan.deposits.map(item => {
-    const tr = el('tr', {}, [
-      el('td', {}, el('input', {
+  const groupCards = order.map(name => {
+    const rows = groups[name].map(item => el('div', { class: 'item-row' }, [
+      el('input', {
         type: 'text', value: item.contributor, placeholder: '이름',
         oninput: e => updateItem('deposits', item.id, 'contributor', e.target.value),
-      })),
-      el('td', {}, el('input', {
+      }),
+      el('input', {
         type: 'text', value: item.label, placeholder: '내역',
         oninput: e => updateItem('deposits', item.id, 'label', e.target.value),
-      })),
-      el('td', {}, el('input', {
+      }),
+      el('input', {
         type: 'number', value: item.amount, placeholder: '0',
         oninput: e => updateItem('deposits', item.id, 'amount', e.target.value),
-      })),
-      el('td', { class: 'amount-cell' }, won(item.amount)),
-      el('td', { class: 'op' }, el('button', { class: 'row-del', onclick: () => removeItem('deposits', item.id) }, '✕')),
+      }),
+      el('span', { class: 'amt-display' }, won(item.amount)),
+      el('button', { class: 'row-del', onclick: () => removeItem('deposits', item.id) }, '✕'),
+    ]));
+    const subtotal = groups[name].reduce((s, x) => s + (Number(x.amount) || 0), 0);
+    return el('div', { class: 'contrib-card' }, [
+      el('div', { class: 'contrib-head' }, [
+        el('span', { class: 'name' }, '👤 ' + name),
+        el('span', { class: 'total' }, won(subtotal)),
+      ]),
+      el('div', { class: 'item-list' }, rows),
     ]);
-    return tr;
   });
-  const total = plan.deposits.reduce((s, x) => s + (Number(x.amount) || 0), 0);
 
-  const table = el('table', {}, [
-    el('thead', {}, el('tr', {}, [
-      el('th', {}, '이름'), el('th', {}, '내역'), el('th', {}, '금액'), el('th', {}, ''), el('th', {}, ''),
-    ])),
-    el('tbody', {}, rows.length ? rows : [el('tr', {}, el('td', { colspan: '5', class: 'empty' }, '입금 내역이 없습니다.'))]),
-    el('tfoot', {}, el('tr', {}, [el('td', {}), el('td', {}, '합계'), el('td', {}, won(total)), el('td', {}), el('td', {})])),
-  ]);
+  const total = plan.deposits.reduce((s, x) => s + (Number(x.amount) || 0), 0);
 
   return el('section', { class: 'block' }, [
     el('div', { class: 'block-head' }, [
       el('h2', {}, '🏦 입금 현황'),
       el('button', { class: 'btn small', onclick: addDeposit }, '+ 입금 추가'),
     ]),
-    chips.length ? el('div', { class: 'contrib-summary' }, chips) : null,
-    table,
+    groupCards.length
+      ? el('div', { class: 'contrib-grid' }, groupCards)
+      : el('div', { class: 'empty' }, '입금 내역이 없습니다.'),
+    el('div', { class: 'list-total' }, [el('span', {}, '전체 합계'), el('span', {}, won(total))]),
   ]);
 }
 
