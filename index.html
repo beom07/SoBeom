@@ -46,55 +46,40 @@
     font-family: var(--font-body);
   }
   a { color: var(--accent); }
-  .app { display: flex; min-height: 100vh; align-items: flex-start; }
 
-  /* Sidebar */
-  .sidebar {
-    width: 250px;
-    flex-shrink: 0;
-    min-height: 100vh;
-    background: var(--paper);
-    border-right: 2px dashed var(--border);
-    padding: 26px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+  .shell { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+  .topbar { padding-top: 26px; }
+  .brand-row {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px; margin-bottom: 18px;
   }
-  .brand { padding: 2px 8px 14px; }
-  .brand .emoji { font-size: 1.8rem; display: block; margin-bottom: 4px; }
-  .brand h1 {
-    font-family: var(--font-head);
-    font-size: 1.4rem;
-    margin: 0;
-    color: var(--text);
+  .brand-mark {
+    font-family: var(--font-head); font-size: 1.3rem; font-weight: 700;
+    display: flex; align-items: center; gap: 8px;
   }
-  .brand .sub { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .icon-btn {
+    background: var(--panel); border: 2px solid var(--border); border-radius: 999px;
+    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 0.95rem; flex-shrink: 0;
+  }
+  .icon-btn:hover { border-color: var(--accent); }
+  .sidebar-foot input[type=file] { display: none; }
 
-  .plan-list { display: flex; flex-direction: column; gap: 8px; }
-  .plan-item {
-    padding: 11px 14px;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    font-size: 0.92rem;
-    font-weight: 600;
-    color: var(--text);
-    background: var(--panel);
-    border: 2px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 6px;
-    transition: transform .12s, border-color .12s;
+  .tabs {
+    display: flex; gap: 4px; border-bottom: 2px dashed var(--border);
+    margin-bottom: 26px; flex-wrap: wrap; overflow-x: auto;
   }
-  .plan-item:hover { border-color: var(--accent-soft); transform: translateX(2px); }
-  .plan-item.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .plan-item .del {
-    opacity: 0;
-    background: none; border: none; color: inherit; cursor: pointer;
-    font-size: 0.85rem; padding: 2px 4px; line-height: 1;
+  .tab {
+    background: transparent; border: none; border-bottom: 3px solid transparent;
+    padding: 10px 14px 12px; font-family: var(--font-body); font-weight: 700; font-size: 0.95rem;
+    color: var(--muted); cursor: pointer; text-decoration: none; margin-bottom: -2px;
+    white-space: nowrap;
   }
-  .plan-item:hover .del { opacity: 0.55; }
-  .plan-item .del:hover { opacity: 1; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-link { color: var(--lavender); }
+  .tab-link:hover { color: var(--lavender); filter: brightness(0.85); }
 
   .btn {
     background: var(--panel);
@@ -114,9 +99,6 @@
   .btn.ghost:hover { border-color: var(--border); }
   .btn.small { padding: 6px 12px; font-size: 0.78rem; }
   .btn.full { width: 100%; }
-
-  .sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 2px dashed var(--border); }
-  .sidebar-foot input[type=file] { display: none; }
 
   .sync-status {
     font-size: 0.75rem; color: var(--muted); padding: 2px 8px 6px;
@@ -151,7 +133,7 @@
   .auth-err { color: var(--bad); min-height: 1.2em; margin: 10px 0 0 !important; font-size: 0.82rem; }
 
   /* Main */
-  .main { flex: 1; padding: 30px 40px 70px; max-width: 980px; }
+  .main { padding-bottom: 70px; }
   .plan-header { margin-bottom: 24px; }
   .plan-header .kicker { font-size: 0.78rem; color: var(--muted); font-weight: 700; letter-spacing: .04em; margin-bottom: 4px; }
   .plan-header input.plan-name {
@@ -273,34 +255,28 @@
   }
 
   @media (max-width: 720px) {
-    .app { flex-direction: column; }
-    .sidebar { width: 100%; min-height: auto; flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 2px dashed var(--border); align-items: center; }
-    .brand { padding: 0 10px 0 0; }
-    .plan-list { flex-direction: row; }
-    .sidebar-foot { flex-direction: row; margin-top: 0; border-top: none; padding-top: 0; }
-    .main { padding: 22px 18px; }
+    .shell { padding: 0 14px; }
+    .brand-mark { font-size: 1.1rem; }
+    .tab { padding: 9px 10px 10px; font-size: 0.85rem; }
     .plan-header input.plan-name { font-size: 1.6rem; }
   }
 </style>
 </head>
 <body>
-<div class="app">
-  <aside class="sidebar">
-    <div class="brand">
-      <span class="emoji">🏡</span>
-      <h1>소범 사이트</h1>
-      <div class="sub">우리의 플랜 다이어리</div>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand-row">
+      <div class="brand-mark">🏡 소범 사이트 ❤️</div>
+      <div class="toolbar">
+        <span class="sync-status" id="syncStatus">–</span>
+        <button class="icon-btn" id="exportBtn" title="내보내기 (Excel)">⬇️</button>
+        <button class="icon-btn" id="importBtn" title="가져오기 (Excel)">⬆️</button>
+        <input type="file" id="importFile" accept=".xlsx,.xls">
+        <button class="icon-btn" id="resetPasscodeBtn" title="비밀번호 재설정">🔑</button>
+      </div>
     </div>
-    <div class="plan-list" id="planList"></div>
-    <button class="btn primary small full" id="addPlanBtn">+ 새 플랜</button>
-    <div class="sidebar-foot">
-      <div class="sync-status" id="syncStatus">–</div>
-      <button class="btn small full" id="exportBtn">내보내기 (Excel)</button>
-      <button class="btn small full" id="importBtn">가져오기 (Excel)</button>
-      <input type="file" id="importFile" accept=".xlsx,.xls">
-      <button class="btn small ghost full" id="resetPasscodeBtn">🔑 비밀번호 재설정</button>
-    </div>
-  </aside>
+    <nav class="tabs" id="tabs"></nav>
+  </header>
 
   <main class="main" id="main"></main>
 </div>
@@ -319,6 +295,11 @@
 const STORAGE_KEY = 'myplans_v1';
 const uid = () => Math.random().toString(36).slice(2, 10);
 const won = n => (Number(n) || 0).toLocaleString('ko-KR') + '원';
+
+const PLAN_META = {
+  'seed-cheongyak': { label: '청약', icon: '🏠', kicker: '🏠 청약 자금 플랜' },
+  'wedding-plan': { label: '웨딩플랜', icon: '💍', kicker: '💍 웨딩 준비 플랜' },
+};
 
 function seedData() {
   return {
@@ -349,8 +330,35 @@ function seedData() {
           { id: uid(), contributor: '희범', label: '입금 3', amount: 20000000 },
         ],
       },
+      {
+        id: 'wedding-plan',
+        name: '웨딩 플랜',
+        costItems: [
+          { id: uid(), label: '스드메 (스튜디오·드레스·메이크업)', amount: 0 },
+          { id: uid(), label: '웨딩홀 대관 · 식대', amount: 0 },
+          { id: uid(), label: '예물 · 예단', amount: 0 },
+          { id: uid(), label: '신혼여행', amount: 0 },
+          { id: uid(), label: '청첩장 · 부케 · 데코', amount: 0 },
+          { id: uid(), label: '예식 진행 (사회 · 축가 등)', amount: 0 },
+        ],
+        payments: [],
+        deposits: [],
+      },
     ],
   };
+}
+
+// Guarantees the two fixed plans (청약 / 웨딩플랜) always exist, merging in
+// any already-saved data by id and dropping plans from the old "add plan" feature.
+function ensureFixedPlans(s) {
+  const defaults = seedData().plans;
+  const plans = defaults.map(def => {
+    const existing = (s && s.plans || []).find(p => p.id === def.id);
+    return existing || def;
+  });
+  const activePlanId = (s && s.activePlanId && plans.some(p => p.id === s.activePlanId))
+    ? s.activePlanId : plans[0].id;
+  return { version: 1, activePlanId, plans };
 }
 
 function loadLocalCache() {
@@ -367,7 +375,7 @@ function save(data) {
   scheduleSync();
 }
 
-let state = loadLocalCache() || seedData();
+let state = ensureFixedPlans(loadLocalCache());
 
 /* ---------- Server sync (Netlify Function + Blobs) ---------- */
 const API_URL = '/.netlify/functions/plans';
@@ -450,7 +458,7 @@ async function trySync() {
   try {
     const serverData = await serverLoad();
     if (serverData) {
-      state = serverData;
+      state = ensureFixedPlans(serverData);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } else {
       await serverSave(state);
@@ -479,27 +487,10 @@ function getActivePlan() {
 function persistAndRender() { save(state); render(); }
 
 /* ---------- Actions ---------- */
-function addPlan() {
-  const name = prompt('새 플랜 이름을 입력하세요', '새 플랜');
-  if (!name) return;
-  const plan = { id: uid(), name, costItems: [], payments: [], deposits: [] };
-  state.plans.push(plan);
-  state.activePlanId = plan.id;
-  persistAndRender();
-}
-function deletePlan(id, evt) {
-  evt.stopPropagation();
-  if (!confirm('이 플랜을 삭제할까요? 되돌릴 수 없습니다.')) return;
-  state.plans = state.plans.filter(p => p.id !== id);
-  if (state.activePlanId === id) {
-    state.activePlanId = state.plans[0] ? state.plans[0].id : null;
-  }
-  persistAndRender();
-}
 function selectPlan(id) { state.activePlanId = id; persistAndRender(); }
 function renamePlan(id, name) {
   const plan = state.plans.find(p => p.id === id);
-  if (plan) { plan.name = name; save(state); renderSidebar(); }
+  if (plan) { plan.name = name; save(state); }
 }
 
 function addCostItem() {
@@ -583,30 +574,34 @@ function importExcel(file) {
         throw new Error('empty');
       }
 
-      const planNames = [];
-      const addName = name => { if (name && !planNames.includes(name)) planNames.push(name); };
+      const importedNames = [];
+      const addName = name => { if (name && !importedNames.includes(name)) importedNames.push(name); };
       planListRows.forEach(r => addName(r['플랜명']));
       costRows.forEach(r => addName(r['플랜명']));
       paymentRows.forEach(r => addName(r['플랜명']));
       depositRows.forEach(r => addName(r['플랜명']));
+      if (!importedNames.length) throw new Error('no plans');
 
-      const plans = planNames.map(name => ({
-        id: uid(),
-        name,
-        costItems: costRows.filter(r => r['플랜명'] === name).map(r => ({
-          id: uid(), label: r['항목'] || '', amount: Number(r['금액']) || 0,
-        })),
-        payments: paymentRows.filter(r => r['플랜명'] === name).map(r => ({
-          id: uid(), date: normalizeDate(r['날짜']), label: r['항목'] || '',
-          amount: Number(r['금액']) || 0, done: isDoneValue(r['완료']),
-        })),
-        deposits: depositRows.filter(r => r['플랜명'] === name).map(r => ({
-          id: uid(), contributor: r['이름'] || '', label: r['내역'] || '', amount: Number(r['금액']) || 0,
-        })),
-      }));
-
-      if (!plans.length) throw new Error('no plans');
-      state = { version: 1, activePlanId: plans[0].id, plans };
+      // Site now has exactly two fixed plans (청약 / 웨딩플랜) — match imported
+      // sheet rows onto them by name, falling back to sheet order by position.
+      state.plans = state.plans.map((existing, i) => {
+        const matchName = importedNames.find(n => n === existing.name) || importedNames[i];
+        if (!matchName) return existing;
+        return {
+          id: existing.id,
+          name: matchName,
+          costItems: costRows.filter(r => r['플랜명'] === matchName).map(r => ({
+            id: uid(), label: r['항목'] || '', amount: Number(r['금액']) || 0,
+          })),
+          payments: paymentRows.filter(r => r['플랜명'] === matchName).map(r => ({
+            id: uid(), date: normalizeDate(r['날짜']), label: r['항목'] || '',
+            amount: Number(r['금액']) || 0, done: isDoneValue(r['완료']),
+          })),
+          deposits: depositRows.filter(r => r['플랜명'] === matchName).map(r => ({
+            id: uid(), contributor: r['이름'] || '', label: r['내역'] || '', amount: Number(r['금액']) || 0,
+          })),
+        };
+      });
       persistAndRender();
     } catch (e) {
       console.error(e);
@@ -630,19 +625,20 @@ function el(tag, attrs = {}, children = []) {
   return e;
 }
 
-function renderSidebar() {
-  const list = document.getElementById('planList');
-  list.innerHTML = '';
+function renderTabs() {
+  const nav = document.getElementById('tabs');
+  nav.innerHTML = '';
   state.plans.forEach(p => {
-    const item = el('div', {
-      class: 'plan-item' + (p.id === state.activePlanId ? ' active' : ''),
+    const meta = PLAN_META[p.id];
+    const tab = el('button', {
+      class: 'tab' + (p.id === state.activePlanId ? ' active' : ''),
       onclick: () => selectPlan(p.id),
-    }, [
-      el('span', {}, p.name || '(이름 없음)'),
-      el('button', { class: 'del', title: '삭제', onclick: (e) => deletePlan(p.id, e) }, '✕'),
-    ]);
-    list.append(item);
+    }, (meta ? meta.icon + ' ' + meta.label : p.name));
+    nav.append(tab);
   });
+  nav.append(el('a', {
+    class: 'tab tab-link', href: '/invite', target: '_blank', rel: 'noopener',
+  }, '💌 모바일청첩장 ↗'));
 }
 
 function calcPlan(plan) {
@@ -666,10 +662,11 @@ function renderMain() {
   main.innerHTML = '';
   const plan = getActivePlan();
   if (!plan) {
-    main.append(el('div', { class: 'empty' }, '플랜이 없습니다. 왼쪽에서 "+ 새 플랜"을 눌러 시작하세요.'));
+    main.append(el('div', { class: 'empty' }, '표시할 플랜이 없습니다.'));
     return;
   }
   const calc = calcPlan(plan);
+  const meta = PLAN_META[plan.id];
 
   // Header
   const nameInput = el('input', {
@@ -677,7 +674,7 @@ function renderMain() {
     oninput: (e) => renamePlan(plan.id, e.target.value),
   });
   main.append(el('div', { class: 'plan-header' }, [
-    el('div', { class: 'kicker' }, '📖 나의 플랜'),
+    el('div', { class: 'kicker' }, meta ? meta.kicker : '📖 나의 플랜'),
     nameInput,
   ]));
 
@@ -841,9 +838,8 @@ function renderDepositSection(plan, calc) {
   ]);
 }
 
-function render() { renderSidebar(); renderMain(); }
+function render() { renderTabs(); renderMain(); }
 
-document.getElementById('addPlanBtn').addEventListener('click', addPlan);
 document.getElementById('exportBtn').addEventListener('click', exportExcel);
 document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
 document.getElementById('importFile').addEventListener('change', (e) => {

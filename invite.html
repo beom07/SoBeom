@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>양희범 ♥ 김소진 결혼합니다</title>
+<meta name="description" content="2027년 2월 27일 토요일 오후 1시 30분, 여의도 더 파티움에서 희범 · 소진의 결혼식이 있습니다.">
+<meta property="og:title" content="양희범 ♥ 김소진 결혼합니다">
+<meta property="og:description" content="2027.02.27 (토) 오후 1:30 · 여의도 더 파티움">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf5ee;
+    --paper: #fffdfa;
+    --panel: #ffffff;
+    --panel-2: #fbeee1;
+    --border: #ecdfce;
+    --text: #4a3f33;
+    --muted: #a5967e;
+    --accent: #e0795c;
+    --accent-soft: #f6d9c9;
+    --sage: #8faa8b;
+    --lavender: #9b8bb4;
+    --radius: 18px;
+    --font-head: 'Gowun Batang', 'Nanum Myeongjo', serif;
+    --font-body: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle, rgba(224,121,92,0.10) 1px, transparent 1px) 0 0/22px 22px,
+      var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    display: flex;
+    justify-content: center;
+  }
+  .card {
+    width: 100%; max-width: 460px;
+    background: var(--paper);
+    min-height: 100vh;
+    box-shadow: 0 0 60px rgba(74,63,51,0.08);
+    padding: 56px 30px 60px;
+  }
+
+  .hero { text-align: center; margin-bottom: 40px; }
+  .kicker {
+    font-size: 0.78rem; letter-spacing: 0.18em; color: var(--muted); font-weight: 700;
+    margin-bottom: 18px;
+  }
+  .names {
+    font-family: var(--font-head); font-size: 2.1rem; font-weight: 700;
+    line-height: 1.5; margin-bottom: 18px;
+  }
+  .names .heart { color: var(--accent); font-size: 1.4rem; margin: 0 8px; }
+  .date-line { font-size: 1.05rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .venue-line { font-size: 0.9rem; color: var(--muted); }
+
+  .divider {
+    display: flex; align-items: center; gap: 12px; margin: 34px 0;
+    color: var(--accent-soft); font-size: 0.9rem;
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  .dday-box {
+    text-align: center; background: var(--panel-2); border-radius: var(--radius);
+    padding: 18px; margin-bottom: 34px;
+  }
+  .dday-box .num { font-family: var(--font-head); font-size: 1.8rem; font-weight: 700; color: var(--accent); }
+  .dday-box .label { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+
+  .greeting {
+    text-align: center; font-size: 0.98rem; line-height: 2; color: var(--text);
+    margin-bottom: 8px; white-space: pre-line;
+  }
+
+  section.block { margin-bottom: 34px; }
+  .block-title {
+    font-family: var(--font-head); font-size: 1.15rem; font-weight: 700;
+    text-align: center; margin-bottom: 16px;
+  }
+
+  .info-card {
+    background: var(--panel); border: 2px solid var(--border); border-radius: var(--radius);
+    padding: 22px 20px; text-align: center;
+  }
+  .info-card .venue-name { font-weight: 800; font-size: 1.1rem; margin-bottom: 4px; }
+  .info-card .venue-detail { color: var(--muted); font-size: 0.85rem; margin-bottom: 16px; }
+
+  .map-links { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .map-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--panel-2); border: 2px solid var(--border); border-radius: 999px;
+    padding: 9px 16px; font-size: 0.85rem; font-weight: 700; color: var(--text);
+    text-decoration: none;
+  }
+  .map-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .account-note {
+    background: var(--panel); border: 2px dashed var(--border); border-radius: var(--radius);
+    padding: 20px; text-align: center; color: var(--muted); font-size: 0.88rem; line-height: 1.7;
+  }
+
+  footer {
+    text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 40px;
+  }
+  footer .heart { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="hero">
+    <div class="kicker">WE ARE GETTING MARRIED</div>
+    <div class="names">양희범<span class="heart">♥</span>김소진</div>
+    <div class="date-line" id="dateLine">2027년 2월 27일</div>
+    <div class="venue-line">여의도 더 파티움</div>
+  </div>
+
+  <div class="dday-box">
+    <div class="num" id="ddayNum">D-day</div>
+    <div class="label">희범 ❤️ 소진의 결혼식이 다가옵니다</div>
+  </div>
+
+  <div class="greeting">두 사람이 하나의 마음으로 만나
+새로운 시작을 앞두고 있습니다.
+
+저희 두 사람의 첫 걸음을
+축복해 주시면 감사하겠습니다.</div>
+
+  <div class="divider">❈</div>
+
+  <section class="block">
+    <div class="block-title">오시는 길</div>
+    <div class="info-card">
+      <div class="venue-name">여의도 더 파티움</div>
+      <div class="venue-detail">2027. 02. 27 (토) 오후 1:30</div>
+      <div class="map-links">
+        <a class="map-btn" id="naverMapLink" href="#" target="_blank" rel="noopener">🗺️ 네이버 지도</a>
+        <a class="map-btn" id="kakaoMapLink" href="#" target="_blank" rel="noopener">🚗 카카오맵</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-title">마음 전하실 곳</div>
+    <div class="account-note">계좌번호는 추후 업데이트될 예정입니다.<br>참석해 주시는 것만으로 큰 힘이 됩니다 🙏</div>
+  </section>
+
+  <footer>양희범 <span class="heart">·</span> 김소진 <span class="heart">♥</span></footer>
+</div>
+
+<script>
+  const weddingDate = new Date('2027-02-27T13:30:00+09:00');
+
+  const weekday = weddingDate.toLocaleDateString('ko-KR', { weekday: 'long' });
+  document.getElementById('dateLine').textContent =
+    `2027년 2월 27일 ${weekday} 오후 1시 30분`;
+
+  const diffDays = Math.ceil((weddingDate - new Date()) / (1000 * 60 * 60 * 24));
+  document.getElementById('ddayNum').textContent =
+    diffDays > 0 ? `D-${diffDays}` : diffDays === 0 ? 'D-Day' : `결혼 후 ${Math.abs(diffDays)}일`;
+
+  const venueQuery = encodeURIComponent('여의도 더파티움');
+  document.getElementById('naverMapLink').href = `https://map.naver.com/p/search/${venueQuery}`;
+  document.getElementById('kakaoMapLink').href = `https://map.kakao.com/link/search/${venueQuery}`;
+</script>
+</body>
+</html>
