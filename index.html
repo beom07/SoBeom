@@ -247,10 +247,20 @@
 
   /* deposits grouped by contributor */
   .contrib-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
-  .contrib-card { background: var(--panel); border: 2px solid var(--border); border-radius: var(--radius); padding: 14px; }
-  .contrib-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 4px; }
-  .contrib-head .name { font-family: var(--font-head); font-weight: 700; font-size: 1.05rem; }
-  .contrib-head .total { font-weight: 800; color: var(--lavender); }
+  .contrib-card { background: var(--panel); border: 2px solid var(--border); border-radius: var(--radius); padding: 14px; min-width: 0; overflow: hidden; }
+  .contrib-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 4px; gap: 8px; }
+  .contrib-head .name { font-family: var(--font-head); font-weight: 700; font-size: 1.05rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .contrib-head .total { font-weight: 800; color: var(--lavender); flex-shrink: 0; }
+
+  .deposit-row {
+    background: var(--panel-2); border: 2px solid var(--border); border-radius: var(--radius-sm);
+    padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; min-width: 0;
+  }
+  .deposit-row .row-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .deposit-row .row-top input[type=text] { flex: 1; min-width: 0; font-weight: 700; }
+  .deposit-row .row-bottom { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .deposit-row .row-bottom input.name-input { width: 60px; flex-shrink: 0; font-size: 0.78rem; color: var(--muted); }
+  .deposit-row .row-bottom input[type=number] { flex: 1; min-width: 0; text-align: right; }
 
   .empty { color: var(--muted); text-align: center; padding: 30px 10px; font-size: 0.9rem; }
   footer.note {
@@ -294,7 +304,7 @@
 <div id="authGate" class="auth-gate" style="display:none">
   <div class="auth-box">
     <h2>🔒 접근 비밀번호</h2>
-    <p>이 플랜은 공유 비밀번호로 보호되어 있습니다. 알고 있는 비밀번호를 입력하세요.</p>
+    <p>이 플랜은 공유 비밀번호로 보호되어 있습니다. 지니 생일 🥳</p>
     <input id="authInput" type="password" placeholder="비밀번호" autocomplete="off">
     <button id="authSubmit" class="btn primary">확인</button>
     <p class="auth-err" id="authErr"></p>
@@ -784,21 +794,24 @@ function renderDepositSection(plan, calc) {
   });
 
   const groupCards = order.map(name => {
-    const rows = groups[name].map(item => el('div', { class: 'item-row' }, [
-      el('input', {
-        type: 'text', value: item.contributor, placeholder: '이름',
-        oninput: e => updateItem('deposits', item.id, 'contributor', e.target.value),
-      }),
-      el('input', {
-        type: 'text', value: item.label, placeholder: '내역',
-        oninput: e => updateItem('deposits', item.id, 'label', e.target.value),
-      }),
-      el('input', {
-        type: 'number', value: item.amount, placeholder: '0',
-        oninput: e => updateItem('deposits', item.id, 'amount', e.target.value),
-      }),
-      el('span', { class: 'amt-display' }, won(item.amount)),
-      el('button', { class: 'row-del', onclick: () => removeItem('deposits', item.id) }, '✕'),
+    const rows = groups[name].map(item => el('div', { class: 'deposit-row' }, [
+      el('div', { class: 'row-top' }, [
+        el('input', {
+          type: 'text', value: item.label, placeholder: '내역',
+          oninput: e => updateItem('deposits', item.id, 'label', e.target.value),
+        }),
+        el('button', { class: 'row-del', onclick: () => removeItem('deposits', item.id) }, '✕'),
+      ]),
+      el('div', { class: 'row-bottom' }, [
+        el('input', {
+          class: 'name-input', type: 'text', value: item.contributor, placeholder: '이름',
+          oninput: e => updateItem('deposits', item.id, 'contributor', e.target.value),
+        }),
+        el('input', {
+          type: 'number', value: item.amount, placeholder: '0',
+          oninput: e => updateItem('deposits', item.id, 'amount', e.target.value),
+        }),
+      ]),
     ]));
     const subtotal = groups[name].reduce((s, x) => s + (Number(x.amount) || 0), 0);
     return el('div', { class: 'contrib-card' }, [
