@@ -14,6 +14,7 @@ window.InviteRender = (function () {
     subwayInfo: '',
     busInfo: '',
     tagline: "We're getting Married!",
+    ddayLabel: '',
     greeting: '두 사람이 하나의 마음으로 만나\n새로운 시작을 앞두고 있습니다.\n\n저희 두 사람의 첫 걸음을\n축복해 주시면 감사하겠습니다.',
     accountNote: '계좌번호는 추후 업데이트될 예정입니다.\n참석해 주시는 것만으로 큰 힘이 됩니다 🙏',
     layout: 'classic',
@@ -23,6 +24,7 @@ window.InviteRender = (function () {
     accentColor: '#e0795c',
     boxColor: '#fbeee1',
     mutedColor: '#a5967e',
+    btnColor: '#fbeee1',
   };
 
   const COLOR_FIELDS = [
@@ -31,6 +33,7 @@ window.InviteRender = (function () {
     { field: 'accentColor', label: '포인트색', varName: '--ir-accent' },
     { field: 'boxColor', label: '박스 배경', varName: '--ir-panel-2' },
     { field: 'mutedColor', label: '보조 글자색', varName: '--ir-muted' },
+    { field: 'btnColor', label: '버튼 배경', varName: '--ir-btn-bg' },
   ];
 
   const LAYOUTS = [
@@ -306,10 +309,14 @@ window.InviteRender = (function () {
     ]);
   }
 
-  function ddayBox(data) {
+  function ddayBox(data, opts) {
+    const autoLabel = `${data.groom} ❤️ ${data.bride}의 결혼식이 다가옵니다`;
+    const labelValue = (data.ddayLabel && data.ddayLabel.trim()) ? data.ddayLabel : autoLabel;
     const box = h('div', { class: 'dday-box' }, [
       h('div', { class: 'num' }, 'D-day'),
-      h('div', { class: 'label' }, `${data.groom} ❤️ ${data.bride}의 결혼식이 다가옵니다`),
+      h('div', { class: 'label' }, [
+        textField(labelValue, opts, v => opts.onText('ddayLabel', v), { cls: 'dday-label-text' }),
+      ]),
     ]);
     try {
       const d = new Date(`${data.date}T${data.time || '00:00'}:00+09:00`);
@@ -410,7 +417,7 @@ window.InviteRender = (function () {
     if (data.photos && (data.photos[0] || (opts && opts.editable))) {
       hero.prepend(photoBlock(data, opts, 0, 'classic-photo'));
     }
-    pad.append(hero, ddayBox(data), calendarSection(data), greetingBlock(data, opts), divider(), mapSection(data, opts), accountSection(data, opts), footerBlock(data));
+    pad.append(hero, ddayBox(data, opts), calendarSection(data), greetingBlock(data, opts), divider(), mapSection(data, opts), accountSection(data, opts), footerBlock(data));
     return pad;
   }
 
@@ -440,7 +447,7 @@ window.InviteRender = (function () {
     ]);
     pad.append(card);
     pad.append(h('div', { class: 'cover2-info' }, [dateTimeField(data, opts), venueField(data, opts)]));
-    pad.append(ddayBox(data), calendarSection(data), greetingBlock(data, opts));
+    pad.append(ddayBox(data, opts), calendarSection(data), greetingBlock(data, opts));
     const galleryIndexes = (data.photos || []).slice(1).map((_, i) => i + 1);
     const gallery = galleryGridSection(data, opts, galleryIndexes, '갤러리');
     if (gallery) pad.append(gallery);
@@ -450,7 +457,7 @@ window.InviteRender = (function () {
 
   function buildGallery(data, opts) {
     const pad = h('div', { class: 'pad' });
-    pad.append(heroBlock(data, opts), ddayBox(data), calendarSection(data), greetingBlock(data, opts));
+    pad.append(heroBlock(data, opts), ddayBox(data, opts), calendarSection(data), greetingBlock(data, opts));
     const allIndexes = (data.photos || []).map((_, i) => i);
     const gallery = galleryGridSection(data, opts, allIndexes, '우리의 순간');
     if (gallery) pad.append(gallery);
@@ -461,7 +468,7 @@ window.InviteRender = (function () {
   function buildPolaroid(data, opts) {
     const editable = opts && opts.editable;
     const pad = h('div', { class: 'pad' });
-    pad.append(heroBlock(data, opts), ddayBox(data), calendarSection(data));
+    pad.append(heroBlock(data, opts), ddayBox(data, opts), calendarSection(data));
     const photos = data.photos || [];
     const tiles = photos.map((_, i) => h('div', { class: 'polaroid-item' }, [photoBlock(data, opts, i, '')]));
     if (editable && photos.length < (opts.maxPhotos || 6)) tiles.push(h('div', { class: 'polaroid-item' }, [addPhotoTile(opts)]));
@@ -473,7 +480,7 @@ window.InviteRender = (function () {
   function buildMinimal(data, opts) {
     const pad = h('div', { class: 'pad' });
     pad.append(heroBlock(data, opts, { cls: 'minimal-hero hero', minimal: true }));
-    pad.append(ddayBox(data), calendarSection(data), greetingBlock(data, opts), divider(), mapSection(data, opts), accountSection(data, opts), footerBlock(data));
+    pad.append(ddayBox(data, opts), calendarSection(data), greetingBlock(data, opts), divider(), mapSection(data, opts), accountSection(data, opts), footerBlock(data));
     return pad;
   }
 
@@ -495,6 +502,7 @@ window.InviteRender = (function () {
 .ir-root {
   --ir-paper: #fffdfa; --ir-panel: #ffffff; --ir-panel-2: #fbeee1; --ir-border: #ecdfce;
   --ir-text: #4a3f33; --ir-muted: #a5967e; --ir-accent: #e0795c; --ir-accent-soft: #f6d9c9;
+  --ir-btn-bg: #fbeee1;
   --ir-radius: 18px;
   --ir-font-head: 'Nanum Myeongjo', 'Gowun Batang', serif;
   --ir-font-body: 'Nanum Myeongjo', 'Gowun Batang', serif;
@@ -542,7 +550,7 @@ window.InviteRender = (function () {
 
 .ir-root .map-links { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .ir-root .map-btn {
-  display: inline-flex; align-items: center; gap: 6px; background: var(--ir-panel-2);
+  display: inline-flex; align-items: center; gap: 6px; background: var(--ir-btn-bg);
   border: 1px solid var(--ir-border); border-radius: 999px; padding: 9px 16px;
   font-size: 0.85rem; font-weight: 700; color: var(--ir-text); text-decoration: none;
 }

@@ -427,7 +427,7 @@ const clearPasscode = () => localStorage.removeItem(PASSCODE_KEY);
 // ad-blocker), the rest of the app (청약/웨딩플랜) must keep working — only
 // the invitation editor itself should degrade.
 const InviteRenderSafe = window.InviteRender || {
-  DEFAULT_INVITE: { groom: '', bride: '', date: '', time: '', venue: '', greeting: '', accountNote: '', layout: 'classic', photos: [], bgColor: '#fffdfa', textColor: '#4a3f33', accentColor: '#e0795c', boxColor: '#fbeee1', mutedColor: '#a5967e' },
+  DEFAULT_INVITE: { groom: '', bride: '', date: '', time: '', venue: '', greeting: '', accountNote: '', ddayLabel: '', layout: 'classic', photos: [], bgColor: '#fffdfa', textColor: '#4a3f33', accentColor: '#e0795c', boxColor: '#fbeee1', mutedColor: '#a5967e', btnColor: '#fbeee1' },
   LAYOUTS: [],
   COLOR_FIELDS: [],
   buildInviteCard: () => document.createTextNode(''),
