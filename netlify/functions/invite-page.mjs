@@ -87,10 +87,16 @@ ${imageTag}
   }
   render({ ...InviteRender.DEFAULT_INVITE, ...(SSR_DATA || {}) });
 
-  // Re-fetch on load too, in case the blob was updated after this page render.
+  // Re-fetch in case the blob changed after this page was rendered — but only
+  // re-render if the data actually differs, otherwise tearing down and
+  // rebuilding an already-correct page just causes a visible flash for nothing.
   fetch('/.netlify/functions/invite')
     .then(res => res.ok ? res.json() : null)
-    .then(json => { if (json && json.data) render({ ...InviteRender.DEFAULT_INVITE, ...json.data }); })
+    .then(json => {
+      if (json && json.data && JSON.stringify(json.data) !== JSON.stringify(SSR_DATA)) {
+        render({ ...InviteRender.DEFAULT_INVITE, ...json.data });
+      }
+    })
     .catch(() => {});
 </script>
 </body>

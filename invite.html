@@ -37,14 +37,15 @@ function render(data) {
   document.title = `${data.groom} ♥ ${data.bride} 결혼합니다`;
 }
 
-render(InviteRender.DEFAULT_INVITE);
-
+// Note: the shared /invite link is server-rendered by
+// netlify/functions/invite-page.mjs (accurate data on first paint, no flash,
+// and correct KakaoTalk/link-preview meta tags). This static file is a
+// fallback for direct /invite.html access — wait for the real data instead
+// of painting a placeholder first and then replacing it.
 fetch('/.netlify/functions/invite')
   .then(res => res.ok ? res.json() : null)
-  .then(json => {
-    if (json && json.data) render({ ...InviteRender.DEFAULT_INVITE, ...json.data });
-  })
-  .catch(() => {});
+  .then(json => render({ ...InviteRender.DEFAULT_INVITE, ...(json && json.data ? json.data : {}) }))
+  .catch(() => render(InviteRender.DEFAULT_INVITE));
 </script>
 </body>
 </html>
