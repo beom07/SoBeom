@@ -9,41 +9,41 @@
 <meta property="og:description" content="우리의 플랜 다이어리">
 <meta property="og:type" content="website">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="/invite-render.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #faf5ee;
-    --paper: #fffdfa;
+    --bg: #f5f5f7;
+    --paper: #ffffff;
     --panel: #ffffff;
-    --panel-2: #fbeee1;
-    --border: #ecdfce;
-    --text: #4a3f33;
-    --muted: #a5967e;
-    --accent: #e0795c;
-    --accent-soft: #f6d9c9;
-    --sage: #8faa8b;
-    --sage-soft: #dfe9dc;
-    --lavender: #9b8bb4;
-    --lavender-soft: #e6e0f0;
-    --good: #6f9d6f;
-    --warn: #d69a4c;
-    --bad: #cc6b5c;
+    --panel-2: #f5f5f7;
+    --border: #d2d2d7;
+    --text: #1d1d1f;
+    --muted: #6e6e73;
+    --accent: #0071e3;
+    --accent-soft: #e8f0fe;
+    --sage: #34c759;
+    --sage-soft: #eafbee;
+    --lavender: #af52de;
+    --lavender-soft: #f6ecfc;
+    --good: #34c759;
+    --warn: #ff9f0a;
+    --bad: #ff3b30;
     --radius: 18px;
     --radius-sm: 12px;
-    --font-head: 'Gowun Batang', 'Nanum Myeongjo', serif;
-    --font-body: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
+    --font-head: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "Malgun Gothic", sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Malgun Gothic", sans-serif;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
     min-height: 100vh;
-    background:
-      radial-gradient(circle, rgba(224,121,92,0.10) 1px, transparent 1px) 0 0/22px 22px,
-      var(--bg);
+    background: var(--bg);
     color: var(--text);
     font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
   }
   a { color: var(--accent); }
 
@@ -59,7 +59,7 @@
   }
   .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .icon-btn {
-    background: var(--panel); border: 2px solid var(--border); border-radius: 999px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 999px;
     width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
     cursor: pointer; font-size: 0.95rem; flex-shrink: 0;
   }
@@ -67,7 +67,7 @@
   .sidebar-foot input[type=file] { display: none; }
 
   .tabs {
-    display: flex; gap: 4px; border-bottom: 2px dashed var(--border);
+    display: flex; gap: 4px; border-bottom: 1px solid var(--border);
     margin-bottom: 26px; flex-wrap: wrap; overflow-x: auto;
   }
   .tab {
@@ -77,19 +77,19 @@
     white-space: nowrap;
   }
   .tab:hover { color: var(--text); }
-  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .tab-link { color: var(--lavender); }
-  .tab-link:hover { color: var(--lavender); filter: brightness(0.85); }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+  .tab-link { color: var(--accent); }
+  .tab-link:hover { color: var(--accent); filter: brightness(0.85); }
 
   .btn {
     background: var(--panel);
     color: var(--text);
-    border: 2px solid var(--border);
+    border: 1px solid var(--border);
     border-radius: 999px;
     padding: 9px 16px;
     cursor: pointer;
     font-size: 0.86rem;
-    font-weight: 700;
+    font-weight: 600;
     font-family: var(--font-body);
   }
   .btn:hover { border-color: var(--accent); color: var(--accent); }
@@ -112,19 +112,19 @@
   .sync-status.offline .dot { background: var(--bad); }
 
   .auth-gate {
-    position: fixed; inset: 0; background: rgba(74, 63, 51, 0.55);
+    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4);
     display: flex; align-items: center; justify-content: center;
     z-index: 100; padding: 20px;
   }
   .auth-box {
-    background: var(--paper); border: 2px solid var(--border); border-radius: var(--radius);
+    background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius);
     padding: 30px 28px; max-width: 340px; width: 100%; text-align: center;
-    box-shadow: 0 18px 40px rgba(74,63,51,0.18);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.18);
   }
   .auth-box h2 { margin: 0 0 10px; font-family: var(--font-head); }
   .auth-box p { color: var(--muted); font-size: 0.88rem; margin: 0 0 16px; line-height: 1.5; }
   .auth-box input {
-    width: 100%; padding: 11px 14px; border-radius: 999px; border: 2px solid var(--border);
+    width: 100%; padding: 11px 14px; border-radius: 999px; border: 1px solid var(--border);
     background: var(--panel); color: var(--text); font-size: 0.95rem; margin-bottom: 14px;
     box-sizing: border-box; text-align: center; font-family: var(--font-body);
   }
@@ -149,9 +149,10 @@
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 22px; }
   .card {
     background: var(--panel);
-    border: 2px solid var(--border);
+    border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 16px 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   }
   .card .label { color: var(--muted); font-size: 0.78rem; font-weight: 700; margin-bottom: 6px; }
   .card .value { font-size: 1.4rem; font-weight: 800; font-family: var(--font-head); }
@@ -160,8 +161,8 @@
   .card .value.bad { color: var(--bad); }
 
   .progress-wrap {
-    margin-bottom: 30px; background: var(--panel); border: 2px solid var(--border);
-    border-radius: var(--radius); padding: 16px 20px;
+    margin-bottom: 30px; background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   }
   .progress-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
   .progress-top .pct { font-family: var(--font-head); font-size: 1.3rem; font-weight: 700; color: var(--accent); }
@@ -180,7 +181,7 @@
   .item-list { display: flex; flex-direction: column; gap: 8px; }
   .item-row {
     display: flex; align-items: center; gap: 10px;
-    background: var(--panel); border: 2px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-sm);
     padding: 8px 10px 8px 14px;
   }
   .item-row input[type=text] { flex: 1; min-width: 0; }
@@ -204,7 +205,7 @@
   .list-total {
     display: flex; justify-content: space-between; padding: 10px 14px;
     font-weight: 800; font-family: var(--font-head); font-size: 1.05rem;
-    border-top: 2px dashed var(--border); margin-top: 4px;
+    border-top: 1px solid var(--border); margin-top: 4px;
   }
 
   /* timeline (payments) */
@@ -221,7 +222,7 @@
   .tl-line { width: 2px; flex: 1; background: var(--border); margin: 2px 0; min-height: 8px; }
   .tl-item:last-child .tl-line { display: none; }
   .tl-content {
-    flex: 1; background: var(--panel); border: 2px solid var(--border); border-radius: var(--radius-sm);
+    flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-sm);
     padding: 12px 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   }
   .tl-item.done .tl-content { background: var(--sage-soft); border-color: var(--sage); }
@@ -233,13 +234,13 @@
 
   /* deposits grouped by contributor */
   .contrib-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
-  .contrib-card { background: var(--panel); border: 2px solid var(--border); border-radius: var(--radius); padding: 14px; min-width: 0; overflow: hidden; }
+  .contrib-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; min-width: 0; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
   .contrib-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 4px; gap: 8px; }
   .contrib-head .name { font-family: var(--font-head); font-weight: 700; font-size: 1.05rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .contrib-head .total { font-weight: 800; color: var(--lavender); flex-shrink: 0; }
 
   .deposit-row {
-    background: var(--panel-2); border: 2px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius-sm);
     padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; min-width: 0;
   }
   .deposit-row .row-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
@@ -255,41 +256,23 @@
   }
 
   /* invite manager */
-  .invite-manager-title { font-family: var(--font-head); font-size: 1.7rem; font-weight: 700; margin-bottom: 4px; }
-  .invite-preview-link { margin-bottom: 24px; }
+  .invite-manager-title { font-family: var(--font-head); font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; color: var(--muted); }
 
-  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
-  .form-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-  .form-field.full { grid-column: 1 / -1; }
-  .form-label { font-size: 0.78rem; font-weight: 700; color: var(--muted); }
-  .form-field input, .form-field textarea {
-    background: var(--panel); border: 2px solid var(--border); border-radius: var(--radius-sm);
-    padding: 10px 12px; font-family: var(--font-body); font-size: 0.92rem; color: var(--text); resize: vertical;
+  .layout-chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .layout-chip {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 999px;
+    padding: 8px 16px; font-size: 0.84rem; font-weight: 600; color: var(--muted);
+    cursor: pointer; font-family: var(--font-body);
   }
-  .form-field input:focus, .form-field textarea:focus { border-color: var(--accent); outline: none; }
+  .layout-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .layout-chip.active { background: var(--text); color: #fff; border-color: var(--text); }
 
-  .layout-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
-  .layout-card {
-    background: var(--panel); border: 2px solid var(--border); border-radius: var(--radius-sm);
-    padding: 14px; cursor: pointer; text-align: center;
+  .invite-frame-wrap { display: flex; justify-content: center; margin-bottom: 20px; }
+  .invite-frame {
+    width: 100%; max-width: 420px; border-radius: 28px; overflow: hidden;
+    border: 1px solid var(--border); box-shadow: 0 12px 40px rgba(0,0,0,0.10);
   }
-  .layout-card:hover { border-color: var(--accent-soft); }
-  .layout-card.active { border-color: var(--accent); background: var(--panel-2); }
-  .layout-name { font-family: var(--font-head); font-weight: 700; margin-bottom: 4px; }
-  .layout-desc { font-size: 0.76rem; color: var(--muted); line-height: 1.4; }
-
-  .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
-  .photo-thumb { position: relative; aspect-ratio: 1; border-radius: var(--radius-sm); overflow: hidden; border: 2px solid var(--border); }
-  .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .photo-del {
-    position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.55); color: #fff;
-    width: 24px; height: 24px; border-radius: 50%; border: none; cursor: pointer; font-size: 0.85rem;
-  }
-  .photo-add {
-    aspect-ratio: 1; border-radius: var(--radius-sm); border: 2px dashed var(--border);
-    background: var(--panel-2); color: var(--muted); cursor: pointer; font-weight: 700; font-size: 0.8rem;
-  }
-  .photo-add:hover { border-color: var(--accent); color: var(--accent); }
+  .invite-open-link { display: block; width: fit-content; margin: 0 auto 30px; }
 
   @media (max-width: 720px) {
     .shell { padding: 0 14px; }
@@ -423,22 +406,7 @@ const setPasscode = v => localStorage.setItem(PASSCODE_KEY, v);
 const clearPasscode = () => localStorage.removeItem(PASSCODE_KEY);
 
 /* ---------- Invitation editor (separate data + endpoint) ---------- */
-const DEFAULT_INVITE = {
-  groom: '양희범', bride: '김소진', date: '2027-02-27', time: '13:30',
-  venue: '여의도 더 파티움',
-  greeting: '두 사람이 하나의 마음으로 만나\n새로운 시작을 앞두고 있습니다.\n\n저희 두 사람의 첫 걸음을\n축복해 주시면 감사하겠습니다.',
-  accountNote: '계좌번호는 추후 업데이트될 예정입니다.\n참석해 주시는 것만으로 큰 힘이 됩니다 🙏',
-  layout: 'classic',
-  photos: [],
-};
-const LAYOUTS = [
-  { id: 'classic', label: '클래식', desc: '사진 한 장을 원형으로, 우아한 세로형' },
-  { id: 'cover', label: '커버 포토', desc: '대표 사진이 상단을 가득 채우는 형태' },
-  { id: 'gallery', label: '갤러리', desc: '여러 장의 사진을 그리드로 보여줌' },
-  { id: 'polaroid', label: '폴라로이드', desc: '사진을 기울여 배치한 아기자기한 느낌' },
-  { id: 'minimal', label: '미니멀', desc: '사진 없이 여백과 타이포 중심' },
-];
-let inviteState = { ...DEFAULT_INVITE };
+let inviteState = { ...InviteRender.DEFAULT_INVITE };
 let inviteLoaded = false;
 let inviteSyncTimer = null;
 
@@ -447,7 +415,7 @@ async function loadInviteData() {
     const res = await fetch('/.netlify/functions/invite');
     if (res.ok) {
       const json = await res.json();
-      if (json.data) inviteState = { ...DEFAULT_INVITE, ...json.data };
+      if (json.data) inviteState = { ...InviteRender.DEFAULT_INVITE, ...json.data };
     }
   } catch (e) { console.error(e); }
   inviteLoaded = true;
@@ -465,12 +433,25 @@ function scheduleInviteSync() {
   }, 700);
 }
 
-function updateInvite(field, value) {
+// Text edits never trigger a re-render (that would steal focus mid-keystroke).
+// Only the venue field has a read-only mirror elsewhere in the card, so patch
+// that in place; other fields (names, greeting, account note) appear once.
+function onInviteText(field, value) {
+  inviteState[field] = value;
+  scheduleInviteSync();
+  if (field === 'venue') {
+    document.querySelectorAll('[data-mirror="venue"]').forEach(m => {
+      if (m !== document.activeElement) m.textContent = value;
+    });
+    const q = encodeURIComponent(value);
+    const nv = document.querySelector('[data-map="naver"]'); if (nv) nv.href = `https://map.naver.com/p/search/${q}`;
+    const kv = document.querySelector('[data-map="kakao"]'); if (kv) kv.href = `https://map.kakao.com/link/search/${q}`;
+  }
+}
+function onInviteDate(field, value) {
   inviteState[field] = value;
   scheduleInviteSync();
 }
-
-function photoUrl(slot) { return `/.netlify/functions/invite-photo?slot=${encodeURIComponent(slot)}`; }
 
 function compressImage(file, maxDim, quality) {
   maxDim = maxDim || 1600; quality = quality || 0.82;
@@ -484,36 +465,48 @@ function compressImage(file, maxDim, quality) {
   });
 }
 
-async function uploadInvitePhoto(file) {
+// index === -1 means "append a new photo"; otherwise replace the photo at that index.
+async function handleInvitePhotoSelect(index, file) {
   try {
     const blob = await compressImage(file);
-    const slot = uid();
-    const res = await fetch(`/.netlify/functions/invite-photo?slot=${slot}`, {
+    const newSlot = uid();
+    const res = await fetch(`/.netlify/functions/invite-photo?slot=${newSlot}`, {
       method: 'POST',
       headers: { 'content-type': 'image/jpeg', 'x-plan-passcode': getPasscode() },
       body: blob,
     });
     if (!res.ok) throw new Error('upload failed: ' + res.status);
-    inviteState.photos.push(slot);
+    let oldSlot = null;
+    if (index === -1) {
+      inviteState.photos.push(newSlot);
+    } else {
+      oldSlot = inviteState.photos[index];
+      inviteState.photos[index] = newSlot;
+    }
     scheduleInviteSync();
     renderInviteManager();
+    if (oldSlot) {
+      fetch(`/.netlify/functions/invite-photo?slot=${oldSlot}`, {
+        method: 'DELETE', headers: { 'x-plan-passcode': getPasscode() },
+      }).catch(() => {});
+    }
   } catch (e) {
     console.error(e);
     alert('사진 업로드에 실패했습니다. 비밀번호가 올바른지 확인해주세요.');
   }
 }
 
-async function removeInvitePhoto(slot) {
+function handleInvitePhotoRemove(index) {
   if (!confirm('이 사진을 삭제할까요?')) return;
-  try {
-    await fetch(`/.netlify/functions/invite-photo?slot=${slot}`, {
-      method: 'DELETE',
-      headers: { 'x-plan-passcode': getPasscode() },
-    });
-  } catch (e) { console.error(e); }
-  inviteState.photos = inviteState.photos.filter(s => s !== slot);
+  const slot = inviteState.photos[index];
+  inviteState.photos.splice(index, 1);
   scheduleInviteSync();
   renderInviteManager();
+  if (slot) {
+    fetch(`/.netlify/functions/invite-photo?slot=${slot}`, {
+      method: 'DELETE', headers: { 'x-plan-passcode': getPasscode() },
+    }).catch(() => {});
+  }
 }
 
 function setSyncStatus(kind, text) {
@@ -642,13 +635,38 @@ function removeItem(arr, id) {
   plan[arr] = plan[arr].filter(x => x.id !== id);
   persistAndRender();
 }
+// Full re-renders (needed here since edits can change totals/cards elsewhere)
+// would normally steal focus from the input the user is mid-keystroke in,
+// since renderMain() rebuilds the whole subtree with brand-new elements.
+// Re-find the equivalent input by its stable data-key afterward and restore
+// focus + cursor position so typing isn't interrupted.
+function withFocusPreserved(fn) {
+  const main = document.getElementById('main');
+  const active = document.activeElement;
+  let key = null, start = null, end = null;
+  if (active && active.hasAttribute && active.hasAttribute('data-key') && main && main.contains(active)) {
+    key = active.getAttribute('data-key');
+    if (typeof active.selectionStart === 'number') { start = active.selectionStart; end = active.selectionEnd; }
+  }
+  fn();
+  if (key) {
+    const again = document.querySelector(`[data-key="${key}"]`);
+    if (again) {
+      again.focus();
+      if (start !== null && again.setSelectionRange) {
+        try { again.setSelectionRange(start, end); } catch (e) {}
+      }
+    }
+  }
+}
+
 function updateItem(arr, id, field, value) {
   const plan = getActivePlan();
   const item = plan[arr].find(x => x.id === id);
   if (!item) return;
   item[field] = field === 'amount' ? (Number(value) || 0) : field === 'done' ? value : value;
   save(state);
-  renderMain();
+  withFocusPreserved(renderMain);
 }
 
 function normalizeDate(v) {
@@ -857,11 +875,11 @@ function renderMain() {
 function renderCostSection(plan) {
   const rows = plan.costItems.map(item => el('div', { class: 'item-row' }, [
     el('input', {
-      type: 'text', value: item.label, placeholder: '항목명',
+      type: 'text', value: item.label, placeholder: '항목명', 'data-key': `costItems:${item.id}:label`,
       oninput: e => updateItem('costItems', item.id, 'label', e.target.value),
     }),
     el('input', {
-      type: 'number', value: item.amount, placeholder: '0',
+      type: 'number', value: item.amount, placeholder: '0', 'data-key': `costItems:${item.id}:amount`,
       oninput: e => updateItem('costItems', item.id, 'amount', e.target.value),
     }),
     el('span', { class: 'amt-display' }, won(item.amount)),
@@ -893,15 +911,15 @@ function renderPaymentSection(plan) {
     ]),
     el('div', { class: 'tl-content' }, [
       el('input', {
-        type: 'date', value: item.date || '',
+        type: 'date', value: item.date || '', 'data-key': `payments:${item.id}:date`,
         oninput: e => updateItem('payments', item.id, 'date', e.target.value),
       }),
       el('input', {
-        type: 'text', value: item.label, placeholder: '납부 항목',
+        type: 'text', value: item.label, placeholder: '납부 항목', 'data-key': `payments:${item.id}:label`,
         oninput: e => updateItem('payments', item.id, 'label', e.target.value),
       }),
       el('input', {
-        type: 'number', value: item.amount, placeholder: '0',
+        type: 'number', value: item.amount, placeholder: '0', 'data-key': `payments:${item.id}:amount`,
         oninput: e => updateItem('payments', item.id, 'amount', e.target.value),
       }),
       el('span', { class: 'amt-display' }, won(item.amount)),
@@ -934,18 +952,18 @@ function renderDepositSection(plan, calc) {
     const rows = groups[name].map(item => el('div', { class: 'deposit-row' }, [
       el('div', { class: 'row-top' }, [
         el('input', {
-          type: 'text', value: item.label, placeholder: '내역',
+          type: 'text', value: item.label, placeholder: '내역', 'data-key': `deposits:${item.id}:label`,
           oninput: e => updateItem('deposits', item.id, 'label', e.target.value),
         }),
         el('button', { class: 'row-del', onclick: () => removeItem('deposits', item.id) }, '✕'),
       ]),
       el('div', { class: 'row-bottom' }, [
         el('input', {
-          class: 'name-input', type: 'text', value: item.contributor, placeholder: '이름',
+          class: 'name-input', type: 'text', value: item.contributor, placeholder: '이름', 'data-key': `deposits:${item.id}:contributor`,
           oninput: e => updateItem('deposits', item.id, 'contributor', e.target.value),
         }),
         el('input', {
-          type: 'number', value: item.amount, placeholder: '0',
+          type: 'number', value: item.amount, placeholder: '0', 'data-key': `deposits:${item.id}:amount`,
           oninput: e => updateItem('deposits', item.id, 'amount', e.target.value),
         }),
       ]),
@@ -974,13 +992,6 @@ function renderDepositSection(plan, calc) {
   ]);
 }
 
-function formField(label, inputEl, span) {
-  return el('label', { class: 'form-field' + (span === 'full' ? ' full' : '') }, [
-    el('span', { class: 'form-label' }, label),
-    inputEl,
-  ]);
-}
-
 function renderInviteManager() {
   const main = document.getElementById('main');
   main.innerHTML = '';
@@ -992,72 +1003,34 @@ function renderInviteManager() {
 
   main.append(el('div', { class: 'plan-header' }, [
     el('div', { class: 'kicker' }, '📝 청첩장 관리'),
-    el('div', { class: 'invite-manager-title' }, '모바일 청첩장 편집'),
+    el('div', { class: 'invite-manager-title' }, '실제 화면에서 바로 수정하세요'),
   ]));
 
-  main.append(el('div', { class: 'invite-preview-link' }, [
-    el('a', { class: 'btn small', href: '/invite', target: '_blank', rel: 'noopener' }, '👀 미리보기 (새 탭) ↗'),
+  const chips = InviteRender.LAYOUTS.map(l => el('button', {
+    class: 'layout-chip' + (inviteState.layout === l.id ? ' active' : ''),
+    title: l.desc,
+    onclick: () => { inviteState.layout = l.id; scheduleInviteSync(); renderInviteManager(); },
+  }, l.label));
+  main.append(el('div', { class: 'layout-chip-row' }, chips));
+
+  const opts = {
+    editable: true,
+    onText: onInviteText,
+    onDate: onInviteDate,
+    onPhotoSelect: handleInvitePhotoSelect,
+    onPhotoRemove: handleInvitePhotoRemove,
+    maxPhotos: 6,
+  };
+  main.append(el('div', { class: 'invite-frame-wrap' }, [
+    el('div', { class: 'invite-frame' }, [InviteRender.buildInviteCard(inviteState, opts)]),
   ]));
 
-  main.append(el('section', { class: 'block' }, [
-    el('div', { class: 'block-head' }, [el('h2', {}, '💑 기본 정보')]),
-    el('div', { class: 'form-grid' }, [
-      formField('신랑 이름', el('input', {
-        type: 'text', value: inviteState.groom, oninput: e => updateInvite('groom', e.target.value),
-      })),
-      formField('신부 이름', el('input', {
-        type: 'text', value: inviteState.bride, oninput: e => updateInvite('bride', e.target.value),
-      })),
-      formField('예식 날짜', el('input', {
-        type: 'date', value: inviteState.date, oninput: e => updateInvite('date', e.target.value),
-      })),
-      formField('예식 시간', el('input', {
-        type: 'time', value: inviteState.time, oninput: e => updateInvite('time', e.target.value),
-      })),
-      formField('예식장', el('input', {
-        type: 'text', value: inviteState.venue, oninput: e => updateInvite('venue', e.target.value),
-      }), 'full'),
-    ]),
-  ]));
-
-  main.append(el('section', { class: 'block' }, [
-    el('div', { class: 'block-head' }, [el('h2', {}, '💌 문구')]),
-    formField('인사말', el('textarea', {
-      rows: '5', oninput: e => updateInvite('greeting', e.target.value),
-    }, inviteState.greeting)),
-    formField('마음 전하실 곳 (계좌 안내)', el('textarea', {
-      rows: '3', oninput: e => updateInvite('accountNote', e.target.value),
-    }, inviteState.accountNote)),
-  ]));
-
-  const layoutCards = LAYOUTS.map(l => el('div', {
-    class: 'layout-card' + (inviteState.layout === l.id ? ' active' : ''),
-    onclick: () => { updateInvite('layout', l.id); renderInviteManager(); },
-  }, [
-    el('div', { class: 'layout-name' }, l.label),
-    el('div', { class: 'layout-desc' }, l.desc),
-  ]));
-  main.append(el('section', { class: 'block' }, [
-    el('div', { class: 'block-head' }, [el('h2', {}, '🎨 배경 레이아웃')]),
-    el('div', { class: 'layout-grid' }, layoutCards),
-  ]));
-
-  const photoThumbs = inviteState.photos.map(slot => el('div', { class: 'photo-thumb' }, [
-    el('img', { src: photoUrl(slot), alt: '' }),
-    el('button', { class: 'photo-del', onclick: () => removeInvitePhoto(slot) }, '✕'),
-  ]));
-  const addPhotoInput = el('input', {
-    type: 'file', accept: 'image/*', style: 'display:none',
-    onchange: e => { if (e.target.files[0]) uploadInvitePhoto(e.target.files[0]); e.target.value = ''; },
-  });
-  const addPhotoBtn = el('button', { class: 'photo-add', onclick: () => addPhotoInput.click() }, '+ 사진 추가');
-  main.append(el('section', { class: 'block' }, [
-    el('div', { class: 'block-head' }, [el('h2', {}, '📷 사진')]),
-    el('div', { class: 'photo-grid' }, [...photoThumbs, addPhotoBtn, addPhotoInput]),
-  ]));
+  main.append(el('a', {
+    class: 'btn small invite-open-link', href: '/invite', target: '_blank', rel: 'noopener',
+  }, '새 탭에서 실제 링크로 열기 ↗'));
 
   main.append(el('footer', { class: 'note' },
-    '변경 사항은 자동으로 저장되어 하객이 보는 청첩장에도 바로 반영됩니다.'));
+    '이름·문구·사진을 클릭해서 바로 수정하세요. 변경 사항은 자동으로 저장되어 하객이 보는 화면에도 바로 반영됩니다.'));
 }
 
 function render() {
