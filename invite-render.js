@@ -319,6 +319,33 @@ window.InviteRender = (function () {
     return box;
   }
 
+  // "Add to calendar" — Google Calendar link + a downloadable .ics (opens
+  // directly in Calendar on iOS, downloads for Android/desktop apps to open).
+  function calendarSection(data) {
+    if (!data.date) return null;
+    const start = new Date(`${data.date}T${data.time || '00:00'}:00+09:00`);
+    if (isNaN(start.getTime())) return null;
+    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+    const fmt = d => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const title = `${data.groom || ''} ♥ ${data.bride || ''} 결혼식`.trim();
+    const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${fmt(start)}/${fmt(end)}&details=${encodeURIComponent(data.venue || '')}&location=${encodeURIComponent(data.venue || '')}`;
+    const icsContent = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT',
+      `DTSTART:${fmt(start)}`, `DTEND:${fmt(end)}`,
+      `SUMMARY:${title}`, `LOCATION:${data.venue || ''}`,
+      'END:VEVENT', 'END:VCALENDAR',
+    ].join('\r\n');
+    const icsHref = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(icsContent);
+
+    return h('section', { class: 'block' }, [
+      h('div', { class: 'block-title' }, '일정 등록'),
+      h('div', { class: 'map-links' }, [
+        h('a', { class: 'map-btn', href: gcalUrl, target: '_blank', rel: 'noopener' }, 'Google 캘린더'),
+        h('a', { class: 'map-btn', href: icsHref, download: `${title}.ics` }, '캘린더 앱에 추가'),
+      ]),
+    ]);
+  }
+
   function greetingBlock(data, opts) {
     return h('div', { class: 'greeting' }, [
       textField(data.greeting, opts, v => opts.onText('greeting', v), { multiline: true, rows: 5, cls: 'greeting-input' }),
@@ -380,7 +407,7 @@ window.InviteRender = (function () {
     if (data.photos && (data.photos[0] || (opts && opts.editable))) {
       hero.prepend(photoBlock(data, opts, 0, 'classic-photo'));
     }
-    pad.append(hero, ddayBox(data), greetingBlock(data, opts), divider(), mapSection(data, opts), accountSection(data, opts), footerBlock(data));
+    pad.append(hero, ddayBox(data), calendarSection(data), greetingBlock(data, opts), divider(), mapSection(data, opts), accountSection(data, opts), footerBlock(data));
     return pad;
   }
 
@@ -410,7 +437,7 @@ window.InviteRender = (function () {
     ]);
     pad.append(card);
     pad.append(h('div', { class: 'cover2-info' }, [dateTimeField(data, opts), venueField(data, opts)]));
-    pad.append(ddayBox(data), greetingBlock(data, opts));
+    pad.append(ddayBox(data), calendarSection(data), greetingBlock(data, opts));
     const galleryIndexes = (data.photos || []).slice(1).map((_, i) => i + 1);
     const gallery = galleryGridSection(data, opts, galleryIndexes, '갤러리');
     if (gallery) pad.append(gallery);
@@ -420,7 +447,7 @@ window.InviteRender = (function () {
 
   function buildGallery(data, opts) {
     const pad = h('div', { class: 'pad' });
-    pad.append(heroBlock(data, opts), ddayBox(data), greetingBlock(data, opts));
+    pad.append(heroBlock(data, opts), ddayBox(data), calendarSection(data), greetingBlock(data, opts));
     const allIndexes = (data.photos || []).map((_, i) => i);
     const gallery = galleryGridSection(data, opts, allIndexes, '우리의 순간');
     if (gallery) pad.append(gallery);
@@ -431,7 +458,7 @@ window.InviteRender = (function () {
   function buildPolaroid(data, opts) {
     const editable = opts && opts.editable;
     const pad = h('div', { class: 'pad' });
-    pad.append(heroBlock(data, opts), ddayBox(data));
+    pad.append(heroBlock(data, opts), ddayBox(data), calendarSection(data));
     const photos = data.photos || [];
     const tiles = photos.map((_, i) => h('div', { class: 'polaroid-item' }, [photoBlock(data, opts, i, '')]));
     if (editable && photos.length < (opts.maxPhotos || 6)) tiles.push(h('div', { class: 'polaroid-item' }, [addPhotoTile(opts)]));
@@ -443,7 +470,7 @@ window.InviteRender = (function () {
   function buildMinimal(data, opts) {
     const pad = h('div', { class: 'pad' });
     pad.append(heroBlock(data, opts, { cls: 'minimal-hero hero', minimal: true }));
-    pad.append(ddayBox(data), greetingBlock(data, opts), divider(), mapSection(data, opts), accountSection(data, opts), footerBlock(data));
+    pad.append(ddayBox(data), calendarSection(data), greetingBlock(data, opts), divider(), mapSection(data, opts), accountSection(data, opts), footerBlock(data));
     return pad;
   }
 

@@ -6,5 +6,5 @@
 
 [[redirects]]
   from = "/invite"
-  to = "/invite.html"
+  to = "/.netlify/functions/invite-page"
   status = 200
