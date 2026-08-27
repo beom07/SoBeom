@@ -16,12 +16,16 @@ window.InviteRender = (function () {
     bgColor: '#fffdfa',
     textColor: '#4a3f33',
     accentColor: '#e0795c',
+    boxColor: '#fbeee1',
+    mutedColor: '#a5967e',
   };
 
   const COLOR_FIELDS = [
     { field: 'bgColor', label: '배경색', varName: '--ir-paper' },
     { field: 'textColor', label: '글자색', varName: '--ir-text' },
     { field: 'accentColor', label: '포인트색', varName: '--ir-accent' },
+    { field: 'boxColor', label: '박스 배경', varName: '--ir-panel-2' },
+    { field: 'mutedColor', label: '보조 글자색', varName: '--ir-muted' },
   ];
 
   const LAYOUTS = [
