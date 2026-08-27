@@ -267,6 +267,16 @@
   .layout-chip:hover { border-color: var(--accent); color: var(--accent); }
   .layout-chip.active { background: var(--text); color: #fff; border-color: var(--text); }
 
+  .color-picker-row { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 24px; }
+  .color-field { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .color-field input[type=color] {
+    width: 30px; height: 30px; padding: 0; border: 1px solid var(--border); border-radius: 50%;
+    cursor: pointer; background: none; overflow: hidden;
+  }
+  .color-field input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+  .color-field input[type=color]::-webkit-color-swatch { border: none; border-radius: 50%; }
+  .color-label { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+
   .invite-frame-wrap { display: flex; justify-content: center; margin-bottom: 20px; }
   .invite-frame {
     width: 100%; max-width: 420px; border-radius: 28px; overflow: hidden;
@@ -410,8 +420,9 @@ const clearPasscode = () => localStorage.removeItem(PASSCODE_KEY);
 // ad-blocker), the rest of the app (청약/웨딩플랜) must keep working — only
 // the invitation editor itself should degrade.
 const InviteRenderSafe = window.InviteRender || {
-  DEFAULT_INVITE: { groom: '', bride: '', date: '', time: '', venue: '', greeting: '', accountNote: '', layout: 'classic', photos: [] },
+  DEFAULT_INVITE: { groom: '', bride: '', date: '', time: '', venue: '', greeting: '', accountNote: '', layout: 'classic', photos: [], bgColor: '#fffdfa', textColor: '#4a3f33', accentColor: '#e0795c' },
   LAYOUTS: [],
+  COLOR_FIELDS: [],
   buildInviteCard: () => document.createTextNode(''),
 };
 let inviteState = { ...InviteRenderSafe.DEFAULT_INVITE };
@@ -1026,6 +1037,20 @@ function renderInviteManager() {
     onclick: () => { inviteState.layout = l.id; scheduleInviteSync(); renderInviteManager(); },
   }, l.label));
   main.append(el('div', { class: 'layout-chip-row' }, chips));
+
+  const colorFields = InviteRenderSafe.COLOR_FIELDS.map(({ field, label, varName }) => el('label', { class: 'color-field' }, [
+    el('input', {
+      type: 'color', value: inviteState[field] || '#ffffff',
+      oninput: e => {
+        inviteState[field] = e.target.value;
+        scheduleInviteSync();
+        const root = document.querySelector('.invite-frame .ir-root');
+        if (root) root.style.setProperty(varName, e.target.value);
+      },
+    }),
+    el('span', { class: 'color-label' }, label),
+  ]));
+  if (colorFields.length) main.append(el('div', { class: 'color-picker-row' }, colorFields));
 
   const opts = {
     editable: true,

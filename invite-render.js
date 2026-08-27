@@ -12,7 +12,16 @@ window.InviteRender = (function () {
     accountNote: '계좌번호는 추후 업데이트될 예정입니다.\n참석해 주시는 것만으로 큰 힘이 됩니다 🙏',
     layout: 'classic',
     photos: [],
+    bgColor: '#fffdfa',
+    textColor: '#4a3f33',
+    accentColor: '#e0795c',
   };
+
+  const COLOR_FIELDS = [
+    { field: 'bgColor', label: '배경색', varName: '--ir-paper' },
+    { field: 'textColor', label: '글자색', varName: '--ir-text' },
+    { field: 'accentColor', label: '포인트색', varName: '--ir-accent' },
+  ];
 
   const LAYOUTS = [
     { id: 'classic', label: '클래식', desc: '사진 한 장을 원형으로, 우아한 세로형' },
@@ -52,9 +61,22 @@ window.InviteRender = (function () {
 
   /* ---------- editable-aware primitives ---------- */
 
+  // `ch` units badly under-measure Korean text (Hangul glyphs are far wider
+  // than the "0" character `ch` is based on), which clipped names. Measure
+  // the actual rendered width with a canvas using the input's real font.
+  let measureCanvas = null;
+  function measureTextWidth(text, font) {
+    if (!measureCanvas) measureCanvas = document.createElement('canvas');
+    const ctx = measureCanvas.getContext('2d');
+    ctx.font = font;
+    return ctx.measureText(text || ' ').width;
+  }
   function sizeToContent(input) {
-    const len = input.value.length || (input.placeholder || '').length || 1;
-    input.style.width = Math.max(2, len + 1) + 'ch';
+    const cs = getComputedStyle(input);
+    const font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const text = input.value || input.placeholder || ' ';
+    const width = measureTextWidth(text, font);
+    input.style.width = Math.ceil(width) + 14 + 'px';
   }
   function autoGrow(ta) {
     ta.style.height = 'auto';
@@ -127,11 +149,57 @@ window.InviteRender = (function () {
     return img;
   }
 
-  // A photo slot: read-only image, or (when editable) a click-to-replace tile
-  // with a remove button. `index` is the position within data.photos.
+  // Full-screen viewer for browsing every uploaded photo (guest view only).
+  // Reuses a single overlay instance appended to <body>.
+  function openLightbox(photos, startIndex) {
+    if (!photos || !photos.length) return;
+    let idx = startIndex;
+    const img = h('img', { class: 'ir-lightbox-img' });
+    const counter = h('div', { class: 'ir-lightbox-counter' });
+    function show() {
+      img.src = photoUrl(photos[idx]);
+      counter.textContent = `${idx + 1} / ${photos.length}`;
+    }
+    function go(delta) { idx = (idx + delta + photos.length) % photos.length; show(); }
+    function onKey(e) {
+      if (e.key === 'Escape') close();
+      else if (e.key === 'ArrowLeft') go(-1);
+      else if (e.key === 'ArrowRight') go(1);
+    }
+    function close() {
+      overlay.remove();
+      document.removeEventListener('keydown', onKey);
+    }
+    const overlay = h('div', { class: 'ir-lightbox', onclick: close }, [
+      h('button', { class: 'ir-lightbox-close', onclick: close }, '✕'),
+      img,
+    ]);
+    img.addEventListener('click', e => e.stopPropagation());
+    if (photos.length > 1) {
+      overlay.append(
+        h('button', { class: 'ir-lightbox-nav ir-lightbox-prev', onclick: e => { e.stopPropagation(); go(-1); } }, '‹'),
+        h('button', { class: 'ir-lightbox-nav ir-lightbox-next', onclick: e => { e.stopPropagation(); go(1); } }, '›'),
+        counter,
+      );
+    }
+    show();
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(overlay);
+  }
+
+  // A photo slot: read-only image (click opens a full lightbox of every
+  // photo), or (when editable) a click-to-replace tile with a remove button.
+  // `index` is the position within data.photos.
   function photoBlock(data, opts, index, cls) {
     const slot = data.photos[index];
-    if (!opts || !opts.editable) return photoNode(slot, cls);
+    if (!opts || !opts.editable) {
+      const img = photoNode(slot, cls);
+      if (img) {
+        img.style.cursor = 'pointer';
+        img.addEventListener('click', () => openLightbox(data.photos, index));
+      }
+      return img;
+    }
 
     const wrap = h('div', { class: ((cls || '') + ' ir-photo-wrap').trim() });
     if (slot) wrap.append(photoNode(slot, 'ir-photo-img'));
@@ -292,6 +360,9 @@ window.InviteRender = (function () {
     opts = opts || {};
     const build = BUILDERS[data.layout] || buildClassic;
     const root = h('div', { class: 'ir-root' });
+    COLOR_FIELDS.forEach(({ field, varName }) => {
+      if (data[field]) root.style.setProperty(varName, data[field]);
+    });
     root.append(build(data, opts));
     return root;
   }
@@ -416,6 +487,30 @@ window.InviteRender = (function () {
 .ir-root .ir-photo-add:hover { border-color: var(--ir-accent); color: var(--ir-accent); }
 .ir-root .polaroid-item .ir-photo-add, .ir-root .polaroid-item .ir-photo-wrap { aspect-ratio: 1; }
 .ir-root .classic-photo .ir-photo-add { border-radius: 50%; }
+
+/* lightbox (appended to <body>, outside .ir-root — kept under its own
+   distinctive ir-lightbox-* names so it can't collide with host page CSS) */
+.ir-lightbox {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 1000;
+  display: flex; align-items: center; justify-content: center; padding: 20px; cursor: zoom-out;
+}
+.ir-lightbox-img { max-width: 100%; max-height: 100%; object-fit: contain; cursor: default; border-radius: 4px; }
+.ir-lightbox-close {
+  position: absolute; top: 16px; right: 16px; width: 40px; height: 40px; border-radius: 50%;
+  background: rgba(255,255,255,0.15); color: #fff; border: none; font-size: 1.1rem; cursor: pointer;
+}
+.ir-lightbox-close:hover { background: rgba(255,255,255,0.28); }
+.ir-lightbox-nav {
+  position: absolute; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; border-radius: 50%;
+  background: rgba(255,255,255,0.15); color: #fff; border: none; font-size: 1.6rem; cursor: pointer; line-height: 1;
+}
+.ir-lightbox-nav:hover { background: rgba(255,255,255,0.28); }
+.ir-lightbox-prev { left: 16px; }
+.ir-lightbox-next { right: 16px; }
+.ir-lightbox-counter {
+  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+  color: rgba(255,255,255,0.85); font-size: 0.82rem; font-weight: 600; letter-spacing: 0.04em;
+}
 `;
 
   if (!document.getElementById('ir-shared-style')) {
@@ -425,5 +520,5 @@ window.InviteRender = (function () {
     document.head.appendChild(styleEl);
   }
 
-  return { DEFAULT_INVITE, LAYOUTS, photoUrl, formatDateLine, buildInviteCard };
+  return { DEFAULT_INVITE, LAYOUTS, COLOR_FIELDS, photoUrl, formatDateLine, buildInviteCard };
 })();
