@@ -12,6 +12,7 @@ window.InviteRender = (function () {
     venueAddress: '',
     venuePhone: '',
     subwayInfo: '',
+    busInfo: '',
     tagline: "We're getting Married!",
     greeting: '두 사람이 하나의 마음으로 만나\n새로운 시작을 앞두고 있습니다.\n\n저희 두 사람의 첫 걸음을\n축복해 주시면 감사하겠습니다.',
     accountNote: '계좌번호는 추후 업데이트될 예정입니다.\n참석해 주시는 것만으로 큰 힘이 됩니다 🙏',
@@ -166,15 +167,14 @@ window.InviteRender = (function () {
     return h('div', { class: 'venue-phone' }, [phoneIcon(), phoneInput]);
   }
 
-  function subwaySection(data, opts) {
+  function transitSection(data, opts, field, titleText, placeholder) {
     const editable = opts && opts.editable;
-    if (!editable && !(data.subwayInfo && data.subwayInfo.trim())) return null;
+    if (!editable && !(data[field] && data[field].trim())) return null;
     return h('div', { class: 'subway-block' }, [
-      h('div', { class: 'subway-title' }, '지하철 Subway'),
+      h('div', { class: 'subway-title' }, titleText),
       h('div', { class: 'subway-text' }, [
-        textField(data.subwayInfo, opts, v => opts.onText('subwayInfo', v), {
-          multiline: true, rows: 3, cls: 'subway-input',
-          placeholder: '예) · 5호선 발산역 3번 출구 도보 5분\n· 9호선 양천향교역 6번 출구 도보 10분',
+        textField(data[field], opts, v => opts.onText(field, v), {
+          multiline: true, rows: 3, cls: 'subway-input', placeholder,
         }),
       ]),
     ]);
@@ -379,7 +379,10 @@ window.InviteRender = (function () {
           h('a', { class: 'map-btn', 'data-map': 'kakao', href: `https://map.kakao.com/link/search/${q}`, target: '_blank', rel: 'noopener' }, '카카오내비'),
           h('a', { class: 'map-btn', 'data-map': 'naver', href: `https://map.naver.com/p/search/${q}`, target: '_blank', rel: 'noopener' }, '네이버지도'),
         ]),
-        subwaySection(data, opts),
+        transitSection(data, opts, 'subwayInfo', '지하철 Subway',
+          '예) · 5호선 발산역 3번 출구 도보 5분\n· 9호선 양천향교역 6번 출구 도보 10분'),
+        transitSection(data, opts, 'busInfo', '버스 Bus',
+          '예) · 간선버스 600, 601번 하차\n· 공항리무진 6003번 이용'),
       ]),
     ]);
   }
