@@ -8,6 +8,7 @@ window.InviteRender = (function () {
   const DEFAULT_INVITE = {
     groom: '양희범', bride: '김소진', date: '2027-02-27', time: '13:30',
     venue: '여의도 더 파티움',
+    tagline: "We're getting Married!",
     greeting: '두 사람이 하나의 마음으로 만나\n새로운 시작을 앞두고 있습니다.\n\n저희 두 사람의 첫 걸음을\n축복해 주시면 감사하겠습니다.',
     accountNote: '계좌번호는 추후 업데이트될 예정입니다.\n참석해 주시는 것만으로 큰 힘이 됩니다 🙏',
     layout: 'classic',
@@ -71,12 +72,13 @@ window.InviteRender = (function () {
     ctx.font = font;
     return ctx.measureText(text || ' ').width;
   }
-  function sizeToContent(input) {
+  function sizeToContent(input, vertical) {
     const cs = getComputedStyle(input);
     const font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
     const text = input.value || input.placeholder || ' ';
-    const width = measureTextWidth(text, font);
-    input.style.width = Math.ceil(width) + 14 + 'px';
+    const size = Math.ceil(measureTextWidth(text, font)) + 14;
+    if (vertical) input.style.height = size + 'px';
+    else input.style.width = size + 'px';
   }
   function autoGrow(ta) {
     ta.style.height = 'auto';
@@ -101,9 +103,9 @@ window.InviteRender = (function () {
     }
     const input = h('input', {
       type: 'text', class: ((options.cls || '') + ' ir-edit ir-edit-input').trim(), value: value || '',
-      oninput: e => { sizeToContent(e.target); handler(e.target.value); },
+      oninput: e => { sizeToContent(e.target, options.vertical); handler(e.target.value); },
     });
-    requestAnimationFrame(() => sizeToContent(input));
+    requestAnimationFrame(() => sizeToContent(input, options.vertical));
     return input;
   }
 
@@ -112,6 +114,18 @@ window.InviteRender = (function () {
     const brideEl = textField(data.bride, opts, v => opts.onText('bride', v), { cls: 'ir-name-input' });
     const heart = h('span', { class: 'heart' }, minimal ? '&' : '♥');
     return h('div', { class: 'names' }, [groomEl, heart, brideEl]);
+  }
+
+  // Vertical, top-to-bottom name display used by the "cover" layout's photo
+  // card (matches the reference: names run down the side of the photo).
+  function verticalNamesField(data, opts) {
+    const groomEl = textField(data.groom, opts, v => opts.onText('groom', v), { cls: 'ir-vertical-name', vertical: true });
+    const brideEl = textField(data.bride, opts, v => opts.onText('bride', v), { cls: 'ir-vertical-name', vertical: true });
+    return h('div', { class: 'cover2-names' }, [groomEl, h('span', { class: 'cover2-dot' }, '·'), brideEl]);
+  }
+
+  function taglineField(data, opts) {
+    return textField(data.tagline, opts, v => opts.onText('tagline', v), { cls: 'cover2-tagline' });
   }
 
   function venueField(data, opts) {
@@ -271,8 +285,8 @@ window.InviteRender = (function () {
         h('div', { class: 'venue-name', 'data-mirror': 'venue' }, data.venue || ''),
         h('div', { class: 'venue-detail', 'data-mirror': 'datetime' }, formatDateLine(data)),
         h('div', { class: 'map-links' }, [
-          h('a', { class: 'map-btn', 'data-map': 'naver', href: `https://map.naver.com/p/search/${q}`, target: '_blank', rel: 'noopener' }, '🗺️ 네이버 지도'),
-          h('a', { class: 'map-btn', 'data-map': 'kakao', href: `https://map.kakao.com/link/search/${q}`, target: '_blank', rel: 'noopener' }, '🚗 카카오맵'),
+          h('a', { class: 'map-btn', 'data-map': 'naver', href: `https://map.naver.com/p/search/${q}`, target: '_blank', rel: 'noopener' }, '네이버 지도'),
+          h('a', { class: 'map-btn', 'data-map': 'kakao', href: `https://map.kakao.com/link/search/${q}`, target: '_blank', rel: 'noopener' }, '카카오맵'),
         ]),
       ]),
     ]);
@@ -321,22 +335,22 @@ window.InviteRender = (function () {
   }
 
   function buildCover(data, opts) {
-    const editable = opts && opts.editable;
-    if (!data.photos || !data.photos[0]) {
-      if (!editable) return buildClassic(data, opts); // guests never see an empty cover slot
-    }
-    const root = document.createDocumentFragment();
-    const heroText = heroBlock(data, opts, { cls: 'cover-text' });
-    const hero = h('div', { class: 'cover-hero' }, [photoBlock(data, opts, 0, 'ir-cover-photo'), heroText]);
-    root.append(hero);
     const pad = h('div', { class: 'pad' });
+    const card = h('div', { class: 'cover2-card' }, [
+      h('div', { class: 'cover2-photo-row' }, [
+        photoBlock(data, opts, 0, 'cover2-photo'),
+        verticalNamesField(data, opts),
+      ]),
+      taglineField(data, opts),
+    ]);
+    pad.append(card);
+    pad.append(h('div', { class: 'cover2-info' }, [dateTimeField(data, opts), venueField(data, opts)]));
     pad.append(ddayBox(data), greetingBlock(data, opts));
     const galleryIndexes = (data.photos || []).slice(1).map((_, i) => i + 1);
     const gallery = galleryGridSection(data, opts, galleryIndexes, '갤러리');
     if (gallery) pad.append(gallery);
     pad.append(divider(), mapSection(data, opts), accountSection(data, opts), footerBlock(data));
-    root.append(pad);
-    return root;
+    return pad;
   }
 
   function buildGallery(data, opts) {
@@ -387,9 +401,11 @@ window.InviteRender = (function () {
   --ir-paper: #fffdfa; --ir-panel: #ffffff; --ir-panel-2: #fbeee1; --ir-border: #ecdfce;
   --ir-text: #4a3f33; --ir-muted: #a5967e; --ir-accent: #e0795c; --ir-accent-soft: #f6d9c9;
   --ir-radius: 18px;
-  --ir-font-head: 'Gowun Batang', 'Nanum Myeongjo', serif;
-  --ir-font-body: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
+  --ir-font-head: 'Nanum Myeongjo', 'Gowun Batang', serif;
+  --ir-font-body: 'Nanum Myeongjo', 'Gowun Batang', serif;
+  --ir-font-script: 'Caveat', cursive;
   font-family: var(--ir-font-body); color: var(--ir-text); background: var(--ir-paper);
+  letter-spacing: 0.01em;
 }
 .ir-root * { box-sizing: border-box; }
 .ir-root .pad { padding: 30px; }
@@ -415,20 +431,20 @@ window.InviteRender = (function () {
 .ir-root section.block { margin-bottom: 34px; }
 .ir-root .block-title { font-family: var(--ir-font-head); font-size: 1.15rem; font-weight: 700; text-align: center; margin-bottom: 16px; }
 
-.ir-root .info-card { background: var(--ir-panel); border: 2px solid var(--ir-border); border-radius: var(--ir-radius); padding: 22px 20px; text-align: center; }
+.ir-root .info-card { background: var(--ir-panel); border: 1px solid var(--ir-border); border-radius: var(--ir-radius); padding: 22px 20px; text-align: center; }
 .ir-root .info-card .venue-name { font-weight: 800; font-size: 1.1rem; margin-bottom: 4px; }
 .ir-root .info-card .venue-detail { color: var(--ir-muted); font-size: 0.85rem; margin-bottom: 16px; }
 
 .ir-root .map-links { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .ir-root .map-btn {
   display: inline-flex; align-items: center; gap: 6px; background: var(--ir-panel-2);
-  border: 2px solid var(--ir-border); border-radius: 999px; padding: 9px 16px;
+  border: 1px solid var(--ir-border); border-radius: 999px; padding: 9px 16px;
   font-size: 0.85rem; font-weight: 700; color: var(--ir-text); text-decoration: none;
 }
 .ir-root .map-btn:hover { border-color: var(--ir-accent); color: var(--ir-accent); }
 
 .ir-root .account-note {
-  background: var(--ir-panel); border: 2px dashed var(--ir-border); border-radius: var(--ir-radius);
+  background: var(--ir-panel); border: 1px dashed var(--ir-border); border-radius: var(--ir-radius);
   padding: 20px; text-align: center; color: var(--ir-muted); font-size: 0.88rem; line-height: 1.7; white-space: pre-line;
 }
 
@@ -442,14 +458,26 @@ window.InviteRender = (function () {
 }
 .ir-root .classic-photo.ir-photo-wrap img { width: 100%; height: 100%; object-fit: cover; }
 
-.ir-root .cover-hero { position: relative; width: 100%; aspect-ratio: 6/5; overflow: hidden; margin-bottom: 32px; }
-.ir-root .cover-hero > .ir-cover-photo, .ir-root .cover-hero > img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.ir-root .cover-hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(20,14,8,0.75) 100%); pointer-events: none; }
-.ir-root .cover-hero .cover-text { position: absolute; left: 0; right: 0; bottom: 24px; z-index: 1; text-align: center; color: #fff; }
-.ir-root .cover-hero .cover-text .kicker { color: rgba(255,255,255,0.85); }
-.ir-root .cover-hero .cover-text .names { color: #fff; }
-.ir-root .cover-hero .cover-text .date-line, .ir-root .cover-hero .cover-text .venue-line, .ir-root .cover-hero .cover-text .date-caption { color: rgba(255,255,255,0.9); }
-.ir-root .cover-hero .cover-text .ir-edit { background: rgba(255,255,255,0.15); color: #fff; }
+.ir-root .cover2-card {
+  background: var(--ir-panel); border-radius: 4px; padding: 22px 16px 20px; margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+.ir-root .cover2-photo-row { display: flex; align-items: stretch; gap: 14px; margin-bottom: 18px; }
+.ir-root .cover2-photo, .ir-root .cover2-photo.ir-photo-wrap {
+  flex: 1; min-width: 0; aspect-ratio: 3/4; object-fit: cover; display: block; background: var(--ir-panel-2);
+}
+.ir-root .cover2-names {
+  flex: 0 0 auto; writing-mode: vertical-rl; text-orientation: upright;
+  font-family: var(--ir-font-head); font-size: 1.05rem; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--ir-text); display: flex; align-items: center; justify-content: center; gap: 4px; padding: 0 4px;
+}
+.ir-root .cover2-dot { color: var(--ir-accent); }
+.ir-root .ir-vertical-name { writing-mode: vertical-rl; text-orientation: upright; }
+.ir-root .cover2-tagline {
+  display: block; width: 100%; text-align: center; font-family: var(--ir-font-script);
+  font-size: 2.2rem; font-weight: 700; color: var(--ir-text); line-height: 1.25;
+}
+.ir-root .cover2-info { text-align: center; margin-bottom: 30px; }
 
 .ir-root .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
 .ir-root .gallery-grid img, .ir-root .gallery-grid .ir-photo-wrap { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; overflow: hidden; }

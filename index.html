@@ -12,7 +12,7 @@
 <script src="/invite-render.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #f5f5f7;
@@ -61,9 +61,10 @@
   .icon-btn {
     background: var(--panel); border: 1px solid var(--border); border-radius: 999px;
     width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; font-size: 0.95rem; flex-shrink: 0;
+    cursor: pointer; color: var(--muted); flex-shrink: 0;
   }
-  .icon-btn:hover { border-color: var(--accent); }
+  .icon-btn svg { width: 17px; height: 17px; }
+  .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
   #importFile { display: none; }
 
   .tabs {
@@ -296,13 +297,19 @@
 <div class="shell">
   <header class="topbar">
     <div class="brand-row">
-      <div class="brand-mark">🏡 소범 사이트 ❤️</div>
+      <div class="brand-mark">소범 사이트 ❤️</div>
       <div class="toolbar">
         <span class="sync-status" id="syncStatus">–</span>
-        <button class="icon-btn" id="exportBtn" title="내보내기 (Excel)">⬇️</button>
-        <button class="icon-btn" id="importBtn" title="가져오기 (Excel)">⬆️</button>
+        <button class="icon-btn" id="exportBtn" title="내보내기 (Excel)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+        </button>
+        <button class="icon-btn" id="importBtn" title="가져오기 (Excel)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9"/><path d="M7 14l5-5 5 5"/><path d="M5 21h14"/></svg>
+        </button>
         <input type="file" id="importFile" accept=".xlsx,.xls">
-        <button class="icon-btn" id="resetPasscodeBtn" title="비밀번호 재설정">🔑</button>
+        <button class="icon-btn" id="resetPasscodeBtn" title="비밀번호 재설정">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        </button>
       </div>
     </div>
     <nav class="tabs" id="tabs"></nav>
@@ -313,7 +320,7 @@
 
 <div id="authGate" class="auth-gate" style="display:none">
   <div class="auth-box">
-    <h2>🔒 접근 비밀번호</h2>
+    <h2>접근 비밀번호</h2>
     <p>이 플랜은 공유 비밀번호로 보호되어 있습니다. 지니 생일 🥳</p>
     <input id="authInput" type="password" placeholder="비밀번호" autocomplete="off">
     <button id="authSubmit" class="btn primary">확인</button>
@@ -327,8 +334,8 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 const won = n => (Number(n) || 0).toLocaleString('ko-KR') + '원';
 
 const PLAN_META = {
-  'seed-cheongyak': { label: '청약', icon: '🏠', kicker: '🏠 청약 자금 플랜' },
-  'wedding-plan': { label: '웨딩플랜', icon: '💍', kicker: '💍 웨딩 준비 플랜' },
+  'seed-cheongyak': { label: '청약', kicker: '청약 자금 플랜' },
+  'wedding-plan': { label: '웨딩플랜', kicker: '웨딩 준비 플랜' },
 };
 
 function seedData() {
@@ -802,16 +809,16 @@ function renderTabs() {
     const tab = el('button', {
       class: 'tab' + (uiView === 'plan' && p.id === state.activePlanId ? ' active' : ''),
       onclick: () => { uiView = 'plan'; selectPlan(p.id); },
-    }, (meta ? meta.icon + ' ' + meta.label : p.name));
+    }, (meta ? meta.label : p.name));
     nav.append(tab);
   });
   nav.append(el('button', {
     class: 'tab' + (uiView === 'invite-manager' ? ' active' : ''),
     onclick: () => { uiView = 'invite-manager'; render(); },
-  }, '📝 청첩장 관리'));
+  }, '청첩장 관리'));
   nav.append(el('a', {
     class: 'tab tab-link', href: '/invite', target: '_blank', rel: 'noopener',
-  }, '💌 청첩장 보기 ↗'));
+  }, '청첩장 보기 ↗'));
 }
 
 function calcPlan(plan) {
@@ -847,7 +854,7 @@ function renderMain() {
     oninput: (e) => renamePlan(plan.id, e.target.value),
   });
   main.append(el('div', { class: 'plan-header' }, [
-    el('div', { class: 'kicker' }, meta ? meta.kicker : '📖 나의 플랜'),
+    el('div', { class: 'kicker' }, meta ? meta.kicker : '나의 플랜'),
     nameInput,
   ]));
 
@@ -908,7 +915,7 @@ function renderCostSection(plan) {
 
   return el('section', { class: 'block' }, [
     el('div', { class: 'block-head' }, [
-      el('h2', {}, '💰 비용 항목'),
+      el('h2', {}, '비용 항목'),
       el('button', { class: 'btn small', onclick: addCostItem }, '+ 항목 추가'),
     ]),
     el('div', { class: 'item-list' },
@@ -949,7 +956,7 @@ function renderPaymentSection(plan) {
 
   return el('section', { class: 'block' }, [
     el('div', { class: 'block-head' }, [
-      el('h2', {}, '📅 납부 일정'),
+      el('h2', {}, '납부 일정'),
       el('button', { class: 'btn small', onclick: addPayment }, '+ 일정 추가'),
     ]),
     el('div', { class: 'timeline' },
@@ -990,7 +997,7 @@ function renderDepositSection(plan, calc) {
     const subtotal = groups[name].reduce((s, x) => s + (Number(x.amount) || 0), 0);
     return el('div', { class: 'contrib-card' }, [
       el('div', { class: 'contrib-head' }, [
-        el('span', { class: 'name' }, '👤 ' + name),
+        el('span', { class: 'name' }, name),
         el('span', { class: 'total' }, won(subtotal)),
       ]),
       el('div', { class: 'item-list' }, rows),
@@ -1001,7 +1008,7 @@ function renderDepositSection(plan, calc) {
 
   return el('section', { class: 'block' }, [
     el('div', { class: 'block-head' }, [
-      el('h2', {}, '🏦 입금 현황'),
+      el('h2', {}, '입금 현황'),
       el('button', { class: 'btn small', onclick: addDeposit }, '+ 입금 추가'),
     ]),
     groupCards.length
@@ -1021,7 +1028,7 @@ function renderInviteManager() {
   }
 
   main.append(el('div', { class: 'plan-header' }, [
-    el('div', { class: 'kicker' }, '📝 청첩장 관리'),
+    el('div', { class: 'kicker' }, '청첩장 관리'),
     el('div', { class: 'invite-manager-title' }, '실제 화면에서 바로 수정하세요'),
   ]));
 
