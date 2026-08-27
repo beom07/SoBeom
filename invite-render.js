@@ -8,6 +8,10 @@ window.InviteRender = (function () {
   const DEFAULT_INVITE = {
     groom: '양희범', bride: '김소진', date: '2027-02-27', time: '13:30',
     venue: '여의도 더 파티움',
+    venueDetail: '',
+    venueAddress: '',
+    venuePhone: '',
+    subwayInfo: '',
     tagline: "We're getting Married!",
     greeting: '두 사람이 하나의 마음으로 만나\n새로운 시작을 앞두고 있습니다.\n\n저희 두 사람의 첫 걸음을\n축복해 주시면 감사하겠습니다.',
     accountNote: '계좌번호는 추후 업데이트될 예정입니다.\n참석해 주시는 것만으로 큰 힘이 됩니다 🙏',
@@ -99,7 +103,7 @@ window.InviteRender = (function () {
     if (options.multiline) {
       const ta = h('textarea', {
         class: ((options.cls || '') + ' ir-edit ir-edit-area').trim(),
-        rows: options.rows || 3,
+        rows: options.rows || 3, placeholder: options.placeholder || null,
         oninput: e => { autoGrow(e.target); handler(e.target.value); },
       }, value || '');
       requestAnimationFrame(() => autoGrow(ta));
@@ -107,6 +111,7 @@ window.InviteRender = (function () {
     }
     const input = h('input', {
       type: 'text', class: ((options.cls || '') + ' ir-edit ir-edit-input').trim(), value: value || '',
+      placeholder: options.placeholder || null,
       oninput: e => { sizeToContent(e.target, options.vertical); handler(e.target.value); },
     });
     requestAnimationFrame(() => sizeToContent(input, options.vertical));
@@ -132,8 +137,47 @@ window.InviteRender = (function () {
     return textField(data.tagline, opts, v => opts.onText('tagline', v), { cls: 'cover2-tagline' });
   }
 
-  function venueField(data, opts) {
-    return textField(data.venue, opts, v => opts.onText('venue', v), { cls: 'venue-line' });
+  // Read-only mirror — the canonical, editable venue-name field now lives in
+  // mapSection's info-card (alongside the hall detail, address, phone).
+  function venueField(data) {
+    return h('div', { class: 'venue-line', 'data-mirror': 'venue' }, data.venue || '');
+  }
+
+  function iconFromSvg(pathsHtml, cls) {
+    const wrap = document.createElement('span');
+    wrap.className = 'ir-icon' + (cls ? ' ' + cls : '');
+    wrap.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${pathsHtml}</svg>`;
+    return wrap;
+  }
+  function phoneIcon() {
+    return iconFromSvg('<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>');
+  }
+
+  function phoneRow(data, opts) {
+    const editable = opts && opts.editable;
+    const hasPhone = data.venuePhone && data.venuePhone.trim();
+    if (!editable && !hasPhone) return null;
+    const phoneInput = textField(data.venuePhone, opts, v => opts.onText('venuePhone', v), {
+      cls: 'venue-phone-text', placeholder: '전화번호',
+    });
+    if (!editable && hasPhone) {
+      return h('a', { class: 'venue-phone', href: `tel:${data.venuePhone}` }, [phoneIcon(), phoneInput]);
+    }
+    return h('div', { class: 'venue-phone' }, [phoneIcon(), phoneInput]);
+  }
+
+  function subwaySection(data, opts) {
+    const editable = opts && opts.editable;
+    if (!editable && !(data.subwayInfo && data.subwayInfo.trim())) return null;
+    return h('div', { class: 'subway-block' }, [
+      h('div', { class: 'subway-title' }, '지하철 Subway'),
+      h('div', { class: 'subway-text' }, [
+        textField(data.subwayInfo, opts, v => opts.onText('subwayInfo', v), {
+          multiline: true, rows: 3, cls: 'subway-input',
+          placeholder: '예) · 5호선 발산역 3번 출구 도보 5분\n· 9호선 양천향교역 6번 출구 도보 10분',
+        }),
+      ]),
+    ]);
   }
 
   function dateTimeField(data, opts) {
@@ -282,16 +326,33 @@ window.InviteRender = (function () {
   }
 
   function mapSection(data, opts) {
-    const q = encodeURIComponent(data.venue || '');
+    const editable = opts && opts.editable;
+    const q = encodeURIComponent(data.venueAddress || data.venue || '');
+    const hallField = (editable || (data.venueDetail && data.venueDetail.trim()))
+      ? h('div', { class: 'venue-hall' }, [
+          textField(data.venueDetail, opts, v => opts.onText('venueDetail', v), { cls: 'venue-hall-text', placeholder: '홀 이름 (예: 네이처홀 1층)' }),
+        ])
+      : null;
+    const addressField = (editable || (data.venueAddress && data.venueAddress.trim()))
+      ? h('div', { class: 'venue-address' }, [
+          textField(data.venueAddress, opts, v => opts.onText('venueAddress', v), { cls: 'venue-address-text', placeholder: '전체 주소 입력' }),
+        ])
+      : null;
     return h('section', { class: 'block' }, [
       h('div', { class: 'block-title' }, '오시는 길'),
       h('div', { class: 'info-card' }, [
-        h('div', { class: 'venue-name', 'data-mirror': 'venue' }, data.venue || ''),
-        h('div', { class: 'venue-detail', 'data-mirror': 'datetime' }, formatDateLine(data)),
-        h('div', { class: 'map-links' }, [
-          h('a', { class: 'map-btn', 'data-map': 'naver', href: `https://map.naver.com/p/search/${q}`, target: '_blank', rel: 'noopener' }, '네이버 지도'),
-          h('a', { class: 'map-btn', 'data-map': 'kakao', href: `https://map.kakao.com/link/search/${q}`, target: '_blank', rel: 'noopener' }, '카카오맵'),
+        h('div', { class: 'venue-name' }, [
+          textField(data.venue, opts, v => opts.onText('venue', v), { cls: 'venue-name-text' }),
         ]),
+        phoneRow(data, opts),
+        hallField,
+        addressField,
+        h('div', { class: 'map-links' }, [
+          h('a', { class: 'map-btn', href: `tmap://search?name=${q}`, rel: 'noopener' }, '티맵'),
+          h('a', { class: 'map-btn', 'data-map': 'kakao', href: `https://map.kakao.com/link/search/${q}`, target: '_blank', rel: 'noopener' }, '카카오내비'),
+          h('a', { class: 'map-btn', 'data-map': 'naver', href: `https://map.naver.com/p/search/${q}`, target: '_blank', rel: 'noopener' }, '네이버지도'),
+        ]),
+        subwaySection(data, opts),
       ]),
     ]);
   }
@@ -436,8 +497,18 @@ window.InviteRender = (function () {
 .ir-root .block-title { font-family: var(--ir-font-head); font-size: 1.15rem; font-weight: 700; text-align: center; margin-bottom: 16px; }
 
 .ir-root .info-card { background: var(--ir-panel); border: 1px solid var(--ir-border); border-radius: var(--ir-radius); padding: 22px 20px; text-align: center; }
-.ir-root .info-card .venue-name { font-weight: 800; font-size: 1.1rem; margin-bottom: 4px; }
-.ir-root .info-card .venue-detail { color: var(--ir-muted); font-size: 0.85rem; margin-bottom: 16px; }
+.ir-root .info-card .venue-name { font-weight: 800; font-size: 1.1rem; margin-bottom: 6px; }
+.ir-root .venue-phone {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  color: var(--ir-muted); font-size: 0.85rem; text-decoration: none; margin-bottom: 8px;
+}
+.ir-root .ir-icon { display: inline-flex; width: 14px; height: 14px; flex-shrink: 0; }
+.ir-root .ir-icon svg { width: 100%; height: 100%; }
+.ir-root .venue-hall, .ir-root .venue-address { color: var(--ir-muted); font-size: 0.85rem; margin-bottom: 4px; }
+.ir-root .venue-address { margin-bottom: 18px; }
+.ir-root .subway-block { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--ir-border); text-align: left; }
+.ir-root .subway-title { font-weight: 700; font-size: 0.92rem; margin-bottom: 8px; }
+.ir-root .subway-text { font-size: 0.85rem; color: var(--ir-text); line-height: 1.8; white-space: pre-line; }
 
 .ir-root .map-links { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .ir-root .map-btn {
