@@ -64,7 +64,7 @@
     cursor: pointer; font-size: 0.95rem; flex-shrink: 0;
   }
   .icon-btn:hover { border-color: var(--accent); }
-  .sidebar-foot input[type=file] { display: none; }
+  #importFile { display: none; }
 
   .tabs {
     display: flex; gap: 4px; border-bottom: 1px solid var(--border);
@@ -406,7 +406,15 @@ const setPasscode = v => localStorage.setItem(PASSCODE_KEY, v);
 const clearPasscode = () => localStorage.removeItem(PASSCODE_KEY);
 
 /* ---------- Invitation editor (separate data + endpoint) ---------- */
-let inviteState = { ...InviteRender.DEFAULT_INVITE };
+// Defensive fallback: if invite-render.js fails to load (CDN hiccup, offline,
+// ad-blocker), the rest of the app (청약/웨딩플랜) must keep working — only
+// the invitation editor itself should degrade.
+const InviteRenderSafe = window.InviteRender || {
+  DEFAULT_INVITE: { groom: '', bride: '', date: '', time: '', venue: '', greeting: '', accountNote: '', layout: 'classic', photos: [] },
+  LAYOUTS: [],
+  buildInviteCard: () => document.createTextNode(''),
+};
+let inviteState = { ...InviteRenderSafe.DEFAULT_INVITE };
 let inviteLoaded = false;
 let inviteSyncTimer = null;
 
@@ -415,7 +423,7 @@ async function loadInviteData() {
     const res = await fetch('/.netlify/functions/invite');
     if (res.ok) {
       const json = await res.json();
-      if (json.data) inviteState = { ...InviteRender.DEFAULT_INVITE, ...json.data };
+      if (json.data) inviteState = { ...InviteRenderSafe.DEFAULT_INVITE, ...json.data };
     }
   } catch (e) { console.error(e); }
   inviteLoaded = true;
@@ -1006,7 +1014,13 @@ function renderInviteManager() {
     el('div', { class: 'invite-manager-title' }, '실제 화면에서 바로 수정하세요'),
   ]));
 
-  const chips = InviteRender.LAYOUTS.map(l => el('button', {
+  if (!window.InviteRender) {
+    main.append(el('div', { class: 'empty' },
+      '청첩장 편집 도구를 불러오지 못했습니다. 새로고침해 주세요. (문제가 계속되면 잠시 후 다시 시도해주세요)'));
+    return;
+  }
+
+  const chips = InviteRenderSafe.LAYOUTS.map(l => el('button', {
     class: 'layout-chip' + (inviteState.layout === l.id ? ' active' : ''),
     title: l.desc,
     onclick: () => { inviteState.layout = l.id; scheduleInviteSync(); renderInviteManager(); },
@@ -1022,7 +1036,7 @@ function renderInviteManager() {
     maxPhotos: 6,
   };
   main.append(el('div', { class: 'invite-frame-wrap' }, [
-    el('div', { class: 'invite-frame' }, [InviteRender.buildInviteCard(inviteState, opts)]),
+    el('div', { class: 'invite-frame' }, [InviteRenderSafe.buildInviteCard(inviteState, opts)]),
   ]));
 
   main.append(el('a', {
