@@ -305,6 +305,21 @@ window.InviteRender = (function () {
     return pad;
   }
 
+  // A 3-column grid section for a set of photo indexes. When editable, an
+  // add-tile is appended (if under maxPhotos) so more photos can be dropped
+  // in right there; omitted entirely for guests when there's nothing to show.
+  function galleryGridSection(data, opts, indexes, title) {
+    const editable = opts && opts.editable;
+    const photos = data.photos || [];
+    const tiles = indexes.map(i => photoBlock(data, opts, i, ''));
+    if (editable && photos.length < (opts.maxPhotos || 6)) tiles.push(addPhotoTile(opts));
+    if (!tiles.length) return null;
+    return h('section', { class: 'block' }, [
+      h('div', { class: 'block-title' }, title),
+      h('div', { class: 'gallery-grid' }, tiles),
+    ]);
+  }
+
   function buildCover(data, opts) {
     const editable = opts && opts.editable;
     if (!data.photos || !data.photos[0]) {
@@ -315,22 +330,21 @@ window.InviteRender = (function () {
     const hero = h('div', { class: 'cover-hero' }, [photoBlock(data, opts, 0, 'ir-cover-photo'), heroText]);
     root.append(hero);
     const pad = h('div', { class: 'pad' });
-    pad.append(ddayBox(data), greetingBlock(data, opts), divider(), mapSection(data, opts), accountSection(data, opts), footerBlock(data));
+    pad.append(ddayBox(data), greetingBlock(data, opts));
+    const galleryIndexes = (data.photos || []).slice(1).map((_, i) => i + 1);
+    const gallery = galleryGridSection(data, opts, galleryIndexes, '갤러리');
+    if (gallery) pad.append(gallery);
+    pad.append(divider(), mapSection(data, opts), accountSection(data, opts), footerBlock(data));
     root.append(pad);
     return root;
   }
 
   function buildGallery(data, opts) {
-    const editable = opts && opts.editable;
     const pad = h('div', { class: 'pad' });
     pad.append(heroBlock(data, opts), ddayBox(data), greetingBlock(data, opts));
-    const photos = data.photos || [];
-    const tiles = photos.map((_, i) => photoBlock(data, opts, i, i === 0 && photos.length % 2 === 1 ? 'wide' : ''));
-    if (editable && photos.length < (opts.maxPhotos || 6)) tiles.push(addPhotoTile(opts));
-    if (tiles.length) {
-      const grid = h('div', { class: 'gallery-grid' }, tiles);
-      pad.append(h('section', { class: 'block' }, [h('div', { class: 'block-title' }, '우리의 순간'), grid]));
-    }
+    const allIndexes = (data.photos || []).map((_, i) => i);
+    const gallery = galleryGridSection(data, opts, allIndexes, '우리의 순간');
+    if (gallery) pad.append(gallery);
     pad.append(divider(), mapSection(data, opts), accountSection(data, opts), footerBlock(data));
     return pad;
   }
@@ -428,7 +442,7 @@ window.InviteRender = (function () {
 }
 .ir-root .classic-photo.ir-photo-wrap img { width: 100%; height: 100%; object-fit: cover; }
 
-.ir-root .cover-hero { position: relative; width: 100%; aspect-ratio: 4/5; overflow: hidden; margin-bottom: 32px; }
+.ir-root .cover-hero { position: relative; width: 100%; aspect-ratio: 6/5; overflow: hidden; margin-bottom: 32px; }
 .ir-root .cover-hero > .ir-cover-photo, .ir-root .cover-hero > img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ir-root .cover-hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(20,14,8,0.75) 100%); pointer-events: none; }
 .ir-root .cover-hero .cover-text { position: absolute; left: 0; right: 0; bottom: 24px; z-index: 1; text-align: center; color: #fff; }
@@ -437,9 +451,8 @@ window.InviteRender = (function () {
 .ir-root .cover-hero .cover-text .date-line, .ir-root .cover-hero .cover-text .venue-line, .ir-root .cover-hero .cover-text .date-caption { color: rgba(255,255,255,0.9); }
 .ir-root .cover-hero .cover-text .ir-edit { background: rgba(255,255,255,0.15); color: #fff; }
 
-.ir-root .gallery-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.ir-root .gallery-grid img, .ir-root .gallery-grid .ir-photo-wrap { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; display: block; overflow: hidden; }
-.ir-root .gallery-grid .wide { grid-column: 1 / -1; aspect-ratio: 16/10; }
+.ir-root .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.ir-root .gallery-grid img, .ir-root .gallery-grid .ir-photo-wrap { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; overflow: hidden; }
 
 .ir-root .polaroid-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px 10px; padding: 10px 0 6px; }
 .ir-root .polaroid-item { background: #fff; padding: 10px 10px 26px; box-shadow: 0 6px 16px rgba(74,63,51,0.18); width: 42%; transform: rotate(-3deg); }
