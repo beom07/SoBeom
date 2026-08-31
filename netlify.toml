@@ -9,6 +9,14 @@
   to = "/.netlify/functions/invite-page"
   status = 200
 
+# Catch the old direct-file link too, so a previously-shared/bookmarked
+# ".../invite.html" URL also gets the server-rendered version (correct
+# KakaoTalk/link-preview image + text) instead of the static fallback file.
+[[redirects]]
+  from = "/invite.html"
+  to = "/.netlify/functions/invite-page"
+  status = 200
+
 [[redirects]]
   from = "/meeting"
   to = "/sanggyeonrye.html"

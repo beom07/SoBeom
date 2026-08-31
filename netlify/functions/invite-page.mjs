@@ -39,9 +39,15 @@ export default async (req) => {
   if (data.date) descParts.push(formatDateLine(data));
   if (data.venue) descParts.push(data.venue);
   const description = descParts.join(' · ') || '모바일 청첩장';
-  const photoSlot = data.photos && data.photos[0];
-  const imageTag = photoSlot
-    ? `<meta property="og:image" content="${origin}/.netlify/functions/invite-photo?slot=${encodeURIComponent(photoSlot)}">\n<meta name="twitter:card" content="summary_large_image">`
+
+  // Prefer the uploaded envelope cover photo for link previews (KakaoTalk,
+  // iMessage, etc.) since that's the couple's chosen representative image;
+  // fall back to the first gallery photo if no envelope image was uploaded.
+  const photoStore = getStore({ name: 'invite-photos', consistency: 'strong' });
+  const envelopeBytes = await photoStore.get('envelope-cover', { type: 'arrayBuffer' }).catch(() => null);
+  const imageSlot = envelopeBytes ? 'envelope-cover' : (data.photos && data.photos[0]);
+  const imageTag = imageSlot
+    ? `<meta property="og:image" content="${origin}/.netlify/functions/invite-photo?slot=${encodeURIComponent(imageSlot)}">\n<meta name="twitter:card" content="summary_large_image">`
     : '';
 
   const html = `<!DOCTYPE html>
