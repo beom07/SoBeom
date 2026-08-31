@@ -1,10 +1,59 @@
-<!DOCTYPE html>
+import { getStore } from '@netlify/blobs';
+
+// Server-renders /meeting so link-preview crawlers (KakaoTalk, iMessage,
+// etc.) see the couple's actual envelope image + intro text in the <head>
+// meta tags — they don't run JavaScript, so the static sanggyeonrye.html
+// with client-fetched data would always show placeholder text in previews.
+// Mirrors netlify/functions/invite-page.mjs.
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+export default async (req) => {
+  const sgStore = getStore({ name: 'sanggyeonrye-data', consistency: 'strong' });
+  const raw = await sgStore.get('content', { type: 'json' });
+  const data = raw || { introText: '', slides: [] };
+
+  // Borrow the couple's names from the invitation data for a nicer title —
+  // 상견례 data itself doesn't track names, just the intro text/slideshow.
+  const inviteStore = getStore({ name: 'invite-data', consistency: 'strong' });
+  const inviteData = await inviteStore.get('content', { type: 'json' }).catch(() => null);
+  const groom = (inviteData && inviteData.groom) || '신랑';
+  const bride = (inviteData && inviteData.bride) || '신부';
+
+  const origin = new URL(req.url).origin;
+  const ssrJson = JSON.stringify(raw || null).replace(/</g, '\\u003c');
+
+  const title = `${groom} · ${bride} 상견례 안내`;
+  const introSnippet = (data.introText || '').replace(/\s+/g, ' ').trim();
+  const description = introSnippet
+    ? (introSnippet.length > 60 ? introSnippet.slice(0, 60) + '…' : introSnippet)
+    : '상견례 안내 자료입니다.';
+
+  // Prefer the uploaded envelope cover photo for link previews (separate
+  // from the invitation's own envelope image); fall back to the first
+  // photo slide if no envelope image was uploaded for 상견례.
+  const photoStore = getStore({ name: 'invite-photos', consistency: 'strong' });
+  const envelopeBytes = await photoStore.get('envelope-cover-sg', { type: 'arrayBuffer' }).catch(() => null);
+  const firstSlidePhoto = (data.slides || []).find(s => s.type === 'photo');
+  const imageSlot = envelopeBytes ? 'envelope-cover-sg' : (firstSlidePhoto && firstSlidePhoto.slot);
+  const imageTag = imageSlot
+    ? `<meta property="og:image" content="${origin}/.netlify/functions/invite-photo?slot=${encodeURIComponent(imageSlot)}">\n<meta name="twitter:card" content="summary_large_image">`
+    : '';
+
+  const html = `<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>상견례 자료</title>
-<meta name="description" content="상견례 자료입니다.">
+<title>${escapeHtml(title)}</title>
+<meta name="description" content="${escapeHtml(description)}">
+<meta property="og:title" content="${escapeHtml(title)}">
+<meta property="og:description" content="${escapeHtml(description)}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="${origin}/meeting">
+${imageTag}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
@@ -52,10 +101,6 @@
     background: rgba(0,0,0,0.45); color: #fff; font-size: 0.75rem; padding: 4px 12px; border-radius: 999px;
   }
 
-  /* envelope intro: an uploaded envelope photo (falls back to a plain card
-     with an icon if none was uploaded — a separate image from /invite's).
-     A single tap rises the whole thing away, revealing the page underneath
-     — no intermediate greeting screen. */
   .sg-envelope-perspective {
     position: fixed; inset: 0; z-index: 500;
     display: flex; align-items: center; justify-content: center; padding: 26px;
@@ -88,19 +133,25 @@
 </head>
 <body>
 <div class="card" id="app"></div>
-
 <script>
-// This static file is a fallback for direct /sanggyeonrye.html access —
-// the shared /meeting link is server-rendered by
-// netlify/functions/meeting-page.mjs (accurate data on first paint, no
-// flash, and correct KakaoTalk/link-preview meta tags).
-SgRender.render(SgRender.DEFAULT_DATA);
-SgRender.showEnvelope();
+  const SSR_DATA = ${ssrJson};
+  SgRender.render(SSR_DATA || SgRender.DEFAULT_DATA);
+  SgRender.showEnvelope();
 
-fetch('/.netlify/functions/sanggyeonrye')
-  .then(res => res.ok ? res.json() : null)
-  .then(json => { if (json && json.data) SgRender.render(json.data); })
-  .catch(() => {});
+  // Re-fetch in case the blob changed after this page was rendered — but only
+  // re-render if the data actually differs, otherwise tearing down and
+  // rebuilding an already-correct page just causes a visible flash for nothing.
+  fetch('/.netlify/functions/sanggyeonrye')
+    .then(res => res.ok ? res.json() : null)
+    .then(json => {
+      if (json && json.data && JSON.stringify(json.data) !== JSON.stringify(SSR_DATA)) {
+        SgRender.render(json.data);
+      }
+    })
+    .catch(() => {});
 </script>
 </body>
-</html>
+</html>`;
+
+  return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } });
+};

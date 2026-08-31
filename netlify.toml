@@ -19,5 +19,12 @@
 
 [[redirects]]
   from = "/meeting"
-  to = "/sanggyeonrye.html"
+  to = "/.netlify/functions/meeting-page"
+  status = 200
+
+# Catch the old direct-file link too, so a previously-shared/bookmarked
+# ".../sanggyeonrye.html" URL also gets the server-rendered version.
+[[redirects]]
+  from = "/sanggyeonrye.html"
+  to = "/.netlify/functions/meeting-page"
   status = 200
