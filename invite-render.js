@@ -418,13 +418,13 @@ window.InviteRender = (function () {
           h('div', { class: 'nav-subtitle' }, '원하시는 앱을 선택하시면 길안내가 시작됩니다.'),
           h('div', { class: 'nav-btn-row' }, [
             h('a', { class: 'nav-btn', 'data-map': 'naver', href: `https://map.naver.com/p/search/${q}`, target: '_blank', rel: 'noopener' }, [
-              h('span', { class: 'nav-icon nav-icon-naver' }, 'N'), '네이버지도',
+              h('img', { class: 'nav-icon', src: '/icons/naver.png', alt: '' }), '네이버지도',
             ]),
             h('a', { class: 'nav-btn', href: `tmap://search?name=${q}`, rel: 'noopener' }, [
-              h('span', { class: 'nav-icon nav-icon-tmap' }, 'T'), '티맵',
+              h('img', { class: 'nav-icon', src: '/icons/tmap.png', alt: '' }), '티맵',
             ]),
             h('a', { class: 'nav-btn', 'data-map': 'kakao', href: `https://map.kakao.com/link/search/${q}`, target: '_blank', rel: 'noopener' }, [
-              h('span', { class: 'nav-icon nav-icon-kakao' }, 'K'), '카카오내비',
+              h('img', { class: 'nav-icon', src: '/icons/kakao.png', alt: '' }), '카카오내비',
             ]),
           ]),
         ]),
@@ -950,13 +950,7 @@ window.InviteRender = (function () {
   background: var(--ir-panel);
 }
 .ir-root .nav-btn:hover { border-color: var(--ir-accent); }
-.ir-root .nav-icon {
-  width: 26px; height: 26px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 0.78rem; font-weight: 800;
-}
-.ir-root .nav-icon-naver { background: #03c75a; }
-.ir-root .nav-icon-tmap { background: #1b90f5; }
-.ir-root .nav-icon-kakao { background: #fee500; color: #391b1b; }
+.ir-root .nav-icon { width: 28px; height: 28px; border-radius: 8px; display: block; object-fit: cover; }
 
 .ir-root .account-note {
   background: var(--ir-panel); border: 1px dashed var(--ir-border); border-radius: var(--ir-radius);
