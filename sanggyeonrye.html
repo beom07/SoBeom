@@ -79,12 +79,31 @@
     background: var(--sg-accent);
     background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--sg-accent) 80%, white), var(--sg-accent) 55%, color-mix(in srgb, var(--sg-accent) 60%, black) 100%);
     display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.7rem;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.22), inset 0 2px 4px rgba(255,255,255,0.35); cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.22), inset 0 2px 4px rgba(255,255,255,0.35);
+    cursor: pointer; transition: opacity .3s ease;
   }
   .sg-env-hint {
     position: absolute; top: calc(50% + 68px); left: 50%; transform: translateX(-50%);
     font-size: 0.72rem; color: var(--sg-muted); letter-spacing: 0.15em; z-index: 2;
+    transition: opacity .3s ease;
   }
+  .sg-envelope-overlay.sg-env-stage-2 .sg-env-seal,
+  .sg-envelope-overlay.sg-env-stage-2 .sg-env-hint { opacity: 0; pointer-events: none; }
+
+  .sg-env-greeting {
+    position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 8px; padding: 40px 30px;
+    text-align: center; opacity: 0; pointer-events: none; transition: opacity .5s ease;
+  }
+  .sg-envelope-overlay.sg-env-stage-2 .sg-env-greeting { opacity: 1; pointer-events: auto; }
+  .sg-env-icon-svg { width: 26px; height: 26px; color: var(--sg-muted); margin-bottom: 4px; }
+  .sg-env-kicker { font-size: 0.7rem; letter-spacing: 0.22em; color: var(--sg-muted); }
+  .sg-env-msg {
+    font-family: var(--sg-font); font-size: 1.05rem; line-height: 1.7; color: var(--sg-text);
+    white-space: pre-line; margin: 6px 0;
+  }
+  .sg-env-chevron { font-size: 1.2rem; color: var(--sg-accent); animation: sg-env-bounce 1.6s ease-in-out infinite; }
+  @keyframes sg-env-bounce { 0%, 100% { transform: translateY(0); opacity: .6; } 50% { transform: translateY(-6px); opacity: 1; } }
 </style>
 </head>
 <body>
@@ -159,30 +178,76 @@ function render(data) {
   }
 }
 
-function showEnvelope() {
+function envelopeIcon() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '1.4');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('class', 'sg-env-icon-svg');
+  svg.innerHTML = '<circle cx="8.5" cy="8" r="2.6"/><circle cx="16" cy="8.5" r="2.2"/>' +
+    '<path d="M3.5 19c.4-3 2.5-5 5-5s4.6 2 5 5"/><path d="M13.6 14.3c2.2.2 3.9 2 4.3 4.7"/>';
+  return svg;
+}
+
+// Guest view only, once per page load: tap the wax seal to reveal a short
+// greeting screen (matches the invitation envelope's stage-2), then tap
+// again to fold the whole envelope layer open (3D rotate) revealing the
+// intro text + slideshow already rendered underneath — no photo is shown
+// in the envelope itself, only after it opens.
+function showEnvelope(data) {
   const persp = el('div', { class: 'sg-envelope-perspective' });
+  const seal = el('button', { class: 'sg-env-seal', type: 'button', 'aria-label': '자료 열기' }, '♥');
+  const hint = el('div', { class: 'sg-env-hint' }, '터치하여 열기');
+  const msgText = (data && data.introText && data.introText.trim())
+    ? data.introText
+    : '상견례 자리에\n함께해 주셔서 감사합니다.';
+  const greeting = el('div', { class: 'sg-env-greeting' }, [
+    envelopeIcon(),
+    el('div', { class: 'sg-env-kicker' }, 'Family Meeting'),
+    el('div', { class: 'sg-env-msg' }, msgText),
+    el('div', { class: 'sg-env-chevron' }, '⌃'),
+  ]);
   const overlay = el('div', { class: 'sg-envelope-overlay' }, [
     el('div', { class: 'sg-env-fold' }),
-    el('button', { class: 'sg-env-seal', type: 'button', 'aria-label': '자료 열기' }, '♥'),
-    el('div', { class: 'sg-env-hint' }, '터치하여 열기'),
+    seal,
+    hint,
+    greeting,
   ]);
   persp.append(overlay);
+
+  let stage = 1;
   persp.addEventListener('click', () => {
-    overlay.classList.add('sg-env-opening');
-    document.body.style.overflow = '';
-    setTimeout(() => persp.remove(), 900);
+    if (stage === 1) {
+      stage = 2;
+      overlay.classList.add('sg-env-stage-2');
+    } else if (stage === 2) {
+      stage = 3;
+      overlay.classList.add('sg-env-opening');
+      document.body.style.overflow = '';
+      setTimeout(() => persp.remove(), 900);
+    }
   });
   document.body.style.overflow = 'hidden';
   document.body.appendChild(persp);
 }
 
-render({ introText: '', slides: [] });
-showEnvelope();
+async function boot() {
+  let data = { introText: '', slides: [] };
+  try {
+    const res = await fetch('/.netlify/functions/sanggyeonrye');
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.data) data = json.data;
+    }
+  } catch {}
+  render(data);
+  showEnvelope(data);
+}
 
-fetch('/.netlify/functions/sanggyeonrye')
-  .then(res => res.ok ? res.json() : null)
-  .then(json => { if (json && json.data) render(json.data); })
-  .catch(() => {});
+boot();
 </script>
 </body>
 </html>

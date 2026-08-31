@@ -886,8 +886,6 @@ window.InviteRender = (function () {
     ]);
 
     overlay.append(fold, seal, hint, greeting);
-    const photoSlot = data.photos && data.photos[0];
-    if (photoSlot) overlay.append(h('div', { class: 'ir-env-photo-peek' }, [photoNode(photoSlot, '')]));
     persp.append(overlay);
 
     let stage = 1;
@@ -1145,12 +1143,6 @@ window.InviteRender = (function () {
 .ir-env-date { font-size: 0.85rem; letter-spacing: 0.1em; color: var(--ir-muted); margin-bottom: 6px; }
 .ir-env-chevron { font-size: 1.2rem; color: var(--ir-accent); animation: ir-env-bounce 1.6s ease-in-out infinite; }
 @keyframes ir-env-bounce { 0%, 100% { transform: translateY(0); opacity: .6; } 50% { transform: translateY(-6px); opacity: 1; } }
-
-.ir-env-photo-peek {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 28%; z-index: 1;
-  border-radius: 50% 50% 0 0 / 50px 50px 0 0; overflow: hidden;
-}
-.ir-env-photo-peek img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 /* editorial theme */
 .ir-root[data-layout="editorial"] {
