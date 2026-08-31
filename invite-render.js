@@ -257,8 +257,9 @@ window.InviteRender = (function () {
     return img;
   }
 
-  // Full-screen viewer for browsing every uploaded photo (guest view only).
-  // Reuses a single overlay instance appended to <body>.
+  // Full-screen viewer, used only by the map "크게보기" button (couple
+  // photos are static now — no tap-to-zoom). Reuses a single overlay
+  // instance appended to <body>.
   function openLightbox(photos, startIndex) {
     if (!photos || !photos.length) return;
     let idx = startIndex;
@@ -295,18 +296,13 @@ window.InviteRender = (function () {
     document.body.appendChild(overlay);
   }
 
-  // A photo slot: read-only image (click opens a full lightbox of every
-  // photo), or (when editable) a click-to-replace tile with a remove button.
+  // A photo slot: plain static image (no tap-to-zoom), or (when editable)
+  // a click-to-replace tile with a remove button.
   // `index` is the position within data.photos.
   function photoBlock(data, opts, index, cls) {
     const slot = data.photos[index];
     if (!opts || !opts.editable) {
-      const img = photoNode(slot, cls);
-      if (img) {
-        img.style.cursor = 'pointer';
-        img.addEventListener('click', () => openLightbox(data.photos, index));
-      }
-      return img;
+      return photoNode(slot, cls);
     }
 
     const wrap = h('div', { class: ((cls || '') + ' ir-photo-wrap' + (slot ? '' : ' ir-photo-empty')).trim() });
