@@ -286,6 +286,16 @@
   }
   .envelope-msg-field textarea:focus { border-color: var(--accent); outline: none; }
 
+  .envelope-img-field { margin-bottom: 20px; }
+  .envelope-img-preview-wrap {
+    width: 140px; aspect-ratio: 17 / 24; border-radius: 10px; overflow: hidden;
+    background: var(--panel-2); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; margin-bottom: 10px;
+  }
+  .envelope-img-preview { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .envelope-img-placeholder { font-size: 0.72rem; color: var(--muted); text-align: center; padding: 10px; line-height: 1.5; }
+  .envelope-img-btn-row { display: flex; gap: 8px; }
+
   .invite-frame-wrap { display: flex; justify-content: center; margin-bottom: 20px; }
   .invite-frame {
     width: 100%; max-width: 420px; border-radius: 28px; overflow: hidden;
@@ -605,6 +615,68 @@ function handleMapImageRemove() {
       method: 'DELETE', headers: { 'x-plan-passcode': getPasscode() },
     }).catch(() => {});
   }
+}
+
+// Envelope cover image: a single well-known slot (not tracked in inviteState
+// at all) shared by both /invite and /meeting — each page just tries to load
+// this exact slot directly and falls back to a plain card if it 404s, so no
+// data-blob field is needed to know whether one was uploaded.
+const ENVELOPE_IMAGE_SLOT = 'envelope-cover';
+let envelopeImgVersion = 0; // cache-busts the preview <img> after upload/remove
+
+async function handleEnvelopeImageSelect(file) {
+  try {
+    const blob = await compressImage(file);
+    const res = await fetch(`/.netlify/functions/invite-photo?slot=${ENVELOPE_IMAGE_SLOT}`, {
+      method: 'POST',
+      headers: { 'content-type': 'image/jpeg', 'x-plan-passcode': getPasscode() },
+      body: blob,
+    });
+    if (!res.ok) throw new Error('upload failed: ' + res.status);
+    envelopeImgVersion++;
+    renderInviteManager();
+  } catch (e) {
+    console.error(e);
+    alert('봉투 이미지 업로드에 실패했습니다. 비밀번호가 올바른지 확인해주세요.');
+  }
+}
+
+function handleEnvelopeImageRemove() {
+  if (!confirm('봉투 이미지를 삭제할까요? 삭제하면 기본 디자인으로 표시됩니다.')) return;
+  fetch(`/.netlify/functions/invite-photo?slot=${ENVELOPE_IMAGE_SLOT}`, {
+    method: 'DELETE', headers: { 'x-plan-passcode': getPasscode() },
+  }).catch(() => {});
+  envelopeImgVersion++;
+  renderInviteManager();
+}
+
+function renderEnvelopeImageBlock() {
+  const img = el('img', {
+    class: 'envelope-img-preview',
+    src: `/.netlify/functions/invite-photo?slot=${ENVELOPE_IMAGE_SLOT}&v=${envelopeImgVersion}`,
+    alt: '',
+  });
+  const placeholder = el('div', { class: 'envelope-img-placeholder' }, '아직 업로드된 봉투 이미지가 없습니다');
+  placeholder.style.display = 'none';
+  const removeBtn = el('button', { class: 'btn small ghost', onclick: handleEnvelopeImageRemove }, '이미지 삭제');
+  removeBtn.style.display = 'none';
+  img.onerror = () => { img.style.display = 'none'; placeholder.style.display = ''; removeBtn.style.display = 'none'; };
+  img.onload = () => { placeholder.style.display = 'none'; removeBtn.style.display = ''; };
+
+  const fileInput = el('input', {
+    type: 'file', accept: 'image/*', style: 'display:none',
+    onchange: e => { if (e.target.files[0]) handleEnvelopeImageSelect(e.target.files[0]); e.target.value = ''; },
+  });
+
+  return el('div', { class: 'envelope-img-field' }, [
+    el('label', { class: 'envelope-msg-label' }, '봉투 디자인 이미지 (선택 — 업로드하면 청첩장/상견례 첫 화면에 함께 쓰여요)'),
+    el('div', { class: 'envelope-img-preview-wrap' }, [img, placeholder]),
+    el('div', { class: 'envelope-img-btn-row' }, [
+      el('button', { class: 'btn small', onclick: () => fileInput.click() }, '이미지 업로드/교체'),
+      removeBtn,
+      fileInput,
+    ]),
+  ]);
 }
 
 /* ---------- 상견례 editor (separate data + endpoint, reuses invite-photo store) ---------- */
@@ -1228,6 +1300,8 @@ function renderInviteManager() {
       oninput: e => { inviteState.envelopeMessage = e.target.value; scheduleInviteSync(); },
     }, inviteState.envelopeMessage || ''),
   ]));
+
+  main.append(renderEnvelopeImageBlock());
 
   const colorFields = InviteRenderSafe.COLOR_FIELDS.map(({ field, label, varName }) => el('label', { class: 'color-field' }, [
     el('input', {

@@ -863,59 +863,39 @@ window.InviteRender = (function () {
   // underneath (no drag-tracking needed — any tap advances the stage).
   let envelopeShown = false;
 
-  // The envelope's pocket (static left/right/bottom panels) and flap (the
-  // top panel that flips open) are drawn as normalized 0-100 triangles so
-  // they scale to any card size via preserveAspectRatio="none".
-  function envelopePocketShape() {
-    const wrap = h('div', { class: 'ir-env-pocket' });
-    wrap.innerHTML =
-      '<svg viewBox="0 0 100 100" preserveAspectRatio="none" class="ir-env-pocket-svg">' +
-      '<polygon class="ir-env-pocket-left" points="0,0 50,54 0,100"/>' +
-      '<polygon class="ir-env-pocket-right" points="100,0 50,54 100,100"/>' +
-      '<polygon class="ir-env-pocket-bottom" points="0,100 50,54 100,100"/>' +
-      '</svg>';
-    return wrap;
-  }
-  function envelopeFlapShape() {
-    const wrap = h('div', { class: 'ir-env-flap-shape' });
-    wrap.innerHTML =
-      '<svg viewBox="0 0 100 100" preserveAspectRatio="none" class="ir-env-flap-svg">' +
-      '<polygon points="0,0 100,0 50,100"/>' +
-      '</svg>';
-    return wrap;
-  }
+  // A single well-known photo slot, uploaded once from the invite manager
+  // and shared by both /invite and /meeting — its mere existence is the
+  // source of truth (no data-blob field needed). Falls back to a plain
+  // card with a candle icon if nothing has been uploaded yet.
+  const ENVELOPE_IMAGE_SLOT = 'envelope-cover';
 
   function buildEnvelopeOverlay(data) {
-    // A perspective wrapper is required for the flap's rotateX to render as
-    // real 3D foreshortening rather than a flat squash.
     const persp = h('div', { class: 'ir-envelope-perspective' });
-    const card = h('div', { class: 'ir-env-card' });
-    const back = h('div', { class: 'ir-env-back' });
+    const box = h('div', { class: 'ir-env-box' });
+    const cover = h('img', { class: 'ir-env-cover-img', src: photoUrl(ENVELOPE_IMAGE_SLOT), alt: '' });
+    const fallbackIcon = h('div', { class: 'ir-env-cover-fallback' }, [candleIcon()]);
+    cover.addEventListener('error', () => { cover.style.display = 'none'; });
 
     const autoMsg = `${withGwaWa(data.groom)} ${data.bride || ''}의 결혼식에\n소중한 분들을 초대합니다.`;
     const msgText = (data.envelopeMessage && data.envelopeMessage.trim()) ? data.envelopeMessage : autoMsg;
     const greeting = h('div', { class: 'ir-env-greeting' }, [
-      candleIcon(),
       h('div', { class: 'ir-env-kicker' }, 'Wedding Invitation'),
       h('div', { class: 'ir-env-msg' }, msgText),
       h('div', { class: 'ir-env-date' }, formatDateCompact(data)),
       h('div', { class: 'ir-env-chevron' }, '⌃'),
     ]);
 
-    const pocket = envelopePocketShape();
-    const seal = h('button', { class: 'ir-env-seal', type: 'button', 'aria-label': '초대장 열기' }, '♥');
-    const flap = h('div', { class: 'ir-env-flap' }, [envelopeFlapShape(), seal]);
-    const hint = h('div', { class: 'ir-env-hint' }, '터치하여 열기');
-
-    card.append(back, greeting, pocket, flap, hint);
-    persp.append(card);
+    box.append(fallbackIcon, cover, greeting);
+    const hint = h('div', { class: 'ir-env-hint' }, '터치하면 열립니다 ✨');
+    const wrap = h('div', { class: 'ir-env-wrap' }, [box, hint]);
+    persp.append(wrap);
 
     let stage = 1;
     const advance = () => {
       if (stage === 1) {
-        // Flap folds open on its top edge and the letter lifts out of the pocket.
+        // Cover image fades/scales away, the greeting card fades/scales in.
         stage = 2;
-        card.classList.add('ir-env-stage-2');
+        wrap.classList.add('ir-env-stage-2');
       } else if (stage === 2) {
         // The whole envelope rises away, revealing the invitation underneath.
         stage = 3;
@@ -1114,13 +1094,12 @@ window.InviteRender = (function () {
   color: rgba(255,255,255,0.85); font-size: 0.82rem; font-weight: 600; letter-spacing: 0.04em;
 }
 
-/* envelope intro: a real paper envelope (pocket + folding flap + wax seal)
-   floats centered on a soft vignette. Tap once: the flap folds open on its
-   top edge (real 3D rotation, not a flat slide) and the letter lifts out
-   of the pocket. Tap again: the whole envelope rises away to reveal the
-   invitation underneath. */
+/* envelope intro: an uploaded envelope photo (falls back to a plain paper
+   card if none was uploaded). Tap once: the cover image fades/scales away
+   and a greeting card fades/scales in over it. Tap again: the whole thing
+   rises away to reveal the invitation underneath. */
 .ir-envelope-perspective {
-  position: fixed; inset: 0; z-index: 500; perspective: 2000px;
+  position: fixed; inset: 0; z-index: 500;
   display: flex; align-items: center; justify-content: center; padding: 26px;
   overflow: hidden; cursor: pointer;
   background: radial-gradient(circle at 50% 42%, var(--ir-paper, #fffdfa) 0%, var(--ir-panel-2, #fbeee1) 100%);
@@ -1128,70 +1107,45 @@ window.InviteRender = (function () {
 }
 .ir-envelope-perspective.ir-env-opening { transform: translateY(-6%) scale(1.04); opacity: 0; }
 
-.ir-env-card {
-  position: relative; width: min(84vw, 340px); aspect-ratio: 17 / 24;
-  transform-style: preserve-3d;
-  filter: drop-shadow(0 25px 40px rgba(0,0,0,0.16));
-}
-.ir-env-back {
-  position: absolute; inset: 0; border-radius: 6px;
+.ir-env-wrap { width: min(84vw, 340px); text-align: center; }
+.ir-env-box {
+  position: relative; width: 100%; aspect-ratio: 17 / 24; border-radius: 12px; overflow: hidden;
   background: var(--ir-panel-2, #fbeee1);
-  box-shadow: inset 0 0 40px rgba(0,0,0,0.06);
+  box-shadow: 0 25px 40px rgba(0,0,0,0.16);
+}
+.ir-env-cover-fallback {
+  position: absolute; inset: 0; z-index: 0; display: flex; align-items: center; justify-content: center;
+}
+.ir-env-cover-img {
+  position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; object-fit: cover;
+  transition: opacity .6s ease, transform .8s cubic-bezier(.4,0,.2,1);
+}
+.ir-env-wrap.ir-env-stage-2 .ir-env-cover-img {
+  opacity: 0; transform: scale(0.92) translateY(-16px); pointer-events: none;
 }
 
 .ir-env-greeting {
-  position: absolute; inset: 10% 8%; z-index: 5; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 8px; text-align: center;
-  opacity: 0; transform: translateY(16px); pointer-events: none;
-  transition: opacity .6s ease .1s, transform .6s cubic-bezier(.34,1.2,.64,1) .1s;
+  position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 20px;
+  background: var(--ir-panel, #ffffff); opacity: 0; transform: translateY(16px) scale(0.95);
+  transition: opacity .8s cubic-bezier(.34,1.56,.64,1), transform .8s cubic-bezier(.34,1.56,.64,1);
 }
-.ir-env-card.ir-env-stage-2 .ir-env-greeting { opacity: 1; transform: translateY(-6%); pointer-events: auto; }
-
-.ir-env-pocket { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
-.ir-env-pocket-svg { width: 100%; height: 100%; display: block; }
-.ir-env-pocket-svg polygon { stroke-width: 0.4; }
-.ir-env-pocket-svg .ir-env-pocket-left { fill: color-mix(in srgb, var(--ir-panel-2, #fbeee1) 90%, white); stroke: rgba(255,255,255,0.5); }
-.ir-env-pocket-svg .ir-env-pocket-right { fill: color-mix(in srgb, var(--ir-panel-2, #fbeee1) 85%, black); stroke: rgba(0,0,0,0.05); }
-.ir-env-pocket-svg .ir-env-pocket-bottom { fill: var(--ir-panel-2, #fbeee1); stroke: rgba(0,0,0,0.05); }
-
-.ir-env-flap {
-  position: absolute; top: 0; left: 0; width: 100%; height: 54%;
-  transform-origin: top center; transform-style: preserve-3d;
-  transition: transform .75s cubic-bezier(.4,0,.2,1);
-  z-index: 4;
-}
-.ir-env-card.ir-env-stage-2 .ir-env-flap { transform: rotateX(180deg); z-index: 1; }
-.ir-env-flap-shape { position: absolute; inset: 0; filter: drop-shadow(0 6px 10px rgba(0,0,0,0.08)); }
-.ir-env-flap-svg { width: 100%; height: 100%; display: block; }
-.ir-env-flap-svg polygon {
-  fill: color-mix(in srgb, var(--ir-paper, #fffdfa) 96%, var(--ir-panel-2, #fbeee1));
-  stroke: rgba(0,0,0,0.04); stroke-width: 0.4;
-}
-
-.ir-env-seal {
-  position: absolute; left: 50%; bottom: -31px; transform: translateX(-50%);
-  z-index: 6; width: 62px; height: 62px; border-radius: 50%; border: none; padding: 0;
-  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--ir-accent) 80%, white), var(--ir-accent) 55%, color-mix(in srgb, var(--ir-accent) 60%, black) 100%);
-  display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.3rem;
-  box-shadow: 0 8px 15px rgba(0,0,0,0.28), inset 0 2px 4px rgba(255,255,255,0.35);
-  cursor: pointer; transition: opacity .3s ease, transform .3s ease;
-}
-.ir-env-card.ir-env-stage-2 .ir-env-seal { opacity: 0; transform: translateX(-50%) scale(0.6); pointer-events: none; }
+.ir-env-wrap.ir-env-stage-2 .ir-env-greeting { opacity: 1; transform: translateY(0) scale(1); }
 
 .ir-env-hint {
-  position: absolute; left: 0; right: 0; top: calc(54% + 46px); text-align: center;
-  font-size: 0.7rem; letter-spacing: 0.2em; color: var(--ir-muted); z-index: 2;
-  transition: opacity .3s ease;
+  margin-top: 18px; font-size: 0.82rem; color: var(--ir-muted); letter-spacing: -0.2px;
+  transition: opacity .3s ease; animation: ir-env-pulse 1.8s infinite;
 }
-.ir-env-card.ir-env-stage-2 .ir-env-hint { opacity: 0; }
+.ir-env-wrap.ir-env-stage-2 .ir-env-hint { opacity: 0; animation: none; }
+@keyframes ir-env-pulse { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
 
-.ir-env-icon-svg { width: 24px; height: 24px; color: var(--ir-muted); margin-bottom: 2px; }
-.ir-env-kicker { font-size: 0.66rem; letter-spacing: 0.22em; color: var(--ir-muted); }
+.ir-env-icon-svg { width: 26px; height: 26px; color: var(--ir-muted); }
+.ir-env-kicker { font-size: 0.68rem; letter-spacing: 0.22em; color: var(--ir-muted); }
 .ir-env-msg {
-  font-family: var(--ir-font-head); font-size: 1rem; line-height: 1.65; color: var(--ir-text);
-  white-space: pre-line; margin: 4px 0;
+  font-family: var(--ir-font-head); font-size: 1.05rem; line-height: 1.7; color: var(--ir-text);
+  white-space: pre-line; margin: 6px 0;
 }
-.ir-env-date { font-size: 0.8rem; letter-spacing: 0.1em; color: var(--ir-muted); margin-bottom: 4px; }
+.ir-env-date { font-size: 0.82rem; letter-spacing: 0.1em; color: var(--ir-muted); margin-bottom: 4px; }
 .ir-env-chevron { font-size: 1.1rem; color: var(--ir-accent); animation: ir-env-bounce 1.6s ease-in-out infinite; }
 @keyframes ir-env-bounce { 0%, 100% { transform: translateY(0); opacity: .6; } 50% { transform: translateY(-6px); opacity: 1; } }
 
