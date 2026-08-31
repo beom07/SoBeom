@@ -634,23 +634,30 @@ function scheduleSgSync() {
 
 function updateSgIntro(v) { sgState.introText = v; scheduleSgSync(); }
 
-async function addSgPhotoSlide(file) {
-  try {
-    const blob = await compressImage(file);
-    const slot = uid();
-    const res = await fetch(`/.netlify/functions/invite-photo?slot=${slot}`, {
-      method: 'POST',
-      headers: { 'content-type': 'image/jpeg', 'x-plan-passcode': getPasscode() },
-      body: blob,
-    });
-    if (!res.ok) throw new Error('upload failed: ' + res.status);
-    sgState.slides.push({ id: uid(), type: 'photo', slot });
-    scheduleSgSync();
-    renderSgManager();
-  } catch (e) {
-    console.error(e);
-    alert('사진 업로드에 실패했습니다. 비밀번호가 올바른지 확인해주세요.');
+// Accepts a FileList (or array) so multiple photos can be selected and
+// uploaded at once — each becomes its own slide, appended in selection order.
+async function addSgPhotoSlides(files) {
+  const list = Array.from(files);
+  let failCount = 0;
+  for (const file of list) {
+    try {
+      const blob = await compressImage(file);
+      const slot = uid();
+      const res = await fetch(`/.netlify/functions/invite-photo?slot=${slot}`, {
+        method: 'POST',
+        headers: { 'content-type': 'image/jpeg', 'x-plan-passcode': getPasscode() },
+        body: blob,
+      });
+      if (!res.ok) throw new Error('upload failed: ' + res.status);
+      sgState.slides.push({ id: uid(), type: 'photo', slot });
+    } catch (e) {
+      console.error(e);
+      failCount++;
+    }
   }
+  scheduleSgSync();
+  renderSgManager();
+  if (failCount) alert(`사진 ${failCount}장 업로드에 실패했습니다. 비밀번호가 올바른지 확인해주세요.`);
 }
 
 function addSgTextSlide() {
@@ -1300,8 +1307,8 @@ function renderSgManager() {
   });
 
   const addPhotoInput = el('input', {
-    type: 'file', accept: 'image/*', style: 'display:none',
-    onchange: e => { if (e.target.files[0]) addSgPhotoSlide(e.target.files[0]); e.target.value = ''; },
+    type: 'file', accept: 'image/*', multiple: '', style: 'display:none',
+    onchange: e => { if (e.target.files.length) addSgPhotoSlides(e.target.files); e.target.value = ''; },
   });
 
   main.append(el('section', { class: 'block' }, [
