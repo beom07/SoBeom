@@ -26,6 +26,12 @@ window.InviteRender = (function () {
     boxColor: '#fbeee1',
     mutedColor: '#a5967e',
     btnColor: '#fbeee1',
+    // editorial theme extras
+    groomFather: '', groomMother: '', brideFather: '', brideMother: '',
+    contactPhone: '', relationshipStartYear: '',
+    mapImageSlot: '',
+    groomBank: '', groomBankAccount: '', groomAccountHolder: '',
+    brideBank: '', brideBankAccount: '', brideAccountHolder: '',
   };
 
   const COLOR_FIELDS = [
@@ -43,7 +49,18 @@ window.InviteRender = (function () {
     { id: 'gallery', label: '갤러리', desc: '여러 장의 사진을 그리드로 보여줌' },
     { id: 'polaroid', label: '폴라로이드', desc: '사진을 기울여 배치한 아기자기한 느낌' },
     { id: 'minimal', label: '미니멀', desc: '사진 없이 여백과 타이포 중심' },
+    { id: 'editorial', label: '매거진', desc: '화보 컨셉의 그레이 톤 에디토리얼 테마' },
   ];
+
+  // Applied to the invite's color fields when this layout is selected in the
+  // manager (still individually overridable afterward via the color pickers).
+  const THEME_PRESETS = {
+    editorial: {
+      bgColor: '#f1efe9', textColor: '#2b2b2a', accentColor: '#2b2b2a',
+      boxColor: '#ffffff', mutedColor: '#9c9a92', btnColor: '#ffffff',
+      tagline: 'invite',
+    },
+  };
 
   function photoUrl(slot) { return `/.netlify/functions/invite-photo?slot=${encodeURIComponent(slot)}`; }
 
@@ -292,7 +309,7 @@ window.InviteRender = (function () {
       return img;
     }
 
-    const wrap = h('div', { class: ((cls || '') + ' ir-photo-wrap').trim() });
+    const wrap = h('div', { class: ((cls || '') + ' ir-photo-wrap' + (slot ? '' : ' ir-photo-empty')).trim() });
     if (slot) wrap.append(photoNode(slot, 'ir-photo-img'));
     wrap.append(h('div', { class: 'ir-photo-overlay' }, slot ? '✎ 사진 변경' : '+ 사진 추가'));
     const fileInput = h('input', {
@@ -321,6 +338,39 @@ window.InviteRender = (function () {
     const tile = h('div', { class: ((cls || '') + ' ir-photo-add').trim() }, ['+ 사진 추가', fileInput]);
     tile.addEventListener('click', e => { if (e.target !== fileInput) fileInput.click(); });
     return tile;
+  }
+
+  // A single named image slot (used for the "약도 이미지" map screenshot) —
+  // distinct from the `photos` gallery array. Guests get a "지도 이미지 보기"
+  // button that opens it in the lightbox; the admin gets an upload/replace tile.
+  function singleImageSlot(data, opts, field, viewLabel) {
+    const slot = data[field];
+    const editable = opts && opts.editable;
+    if (!editable) {
+      if (!slot) return null;
+      const btn = h('button', { class: 'map-btn', type: 'button' }, viewLabel);
+      btn.addEventListener('click', () => openLightbox([slot], 0));
+      return btn;
+    }
+    const wrap = h('div', { class: 'ir-photo-wrap ed-map-image-slot' + (slot ? '' : ' ir-photo-empty') });
+    if (slot) wrap.append(photoNode(slot, 'ir-photo-img'));
+    wrap.append(h('div', { class: 'ir-photo-overlay' }, slot ? '✎ 지도 이미지 변경' : '+ 지도 이미지 추가'));
+    const fileInput = h('input', {
+      type: 'file', accept: 'image/*', class: 'ir-photo-file-input',
+      onchange: e => { if (e.target.files[0]) opts.onMapImageSelect(e.target.files[0]); e.target.value = ''; },
+    });
+    wrap.append(fileInput);
+    if (slot) {
+      const removeBtn = h('button', {
+        class: 'ir-photo-remove', title: '삭제',
+        onclick: e => { e.stopPropagation(); opts.onMapImageRemove(); },
+      }, '✕');
+      wrap.append(removeBtn);
+      wrap.addEventListener('click', e => { if (e.target !== removeBtn) fileInput.click(); });
+    } else {
+      wrap.addEventListener('click', () => fileInput.click());
+    }
+    return wrap;
   }
 
   /* ---------- shared blocks ---------- */
@@ -407,6 +457,7 @@ window.InviteRender = (function () {
         phoneRow(data, opts),
         hallField,
         addressField,
+        singleImageSlot(data, opts, 'mapImageSlot', '지도 이미지 보기'),
         h('div', { class: 'map-links' }, [
           h('a', { class: 'map-btn', href: `tmap://search?name=${q}`, rel: 'noopener' }, '티맵'),
           h('a', { class: 'map-btn', 'data-map': 'kakao', href: `https://map.kakao.com/link/search/${q}`, target: '_blank', rel: 'noopener' }, '카카오내비'),
@@ -510,7 +561,296 @@ window.InviteRender = (function () {
     return pad;
   }
 
-  const BUILDERS = { classic: buildClassic, cover: buildCover, gallery: buildGallery, polaroid: buildPolaroid, minimal: buildMinimal };
+  /* ---------- editorial theme ---------- */
+
+  function edKicker(text) { return h('div', { class: 'ed-kicker' }, text); }
+
+  function editorialHero(data, opts) {
+    return h('div', { class: 'ed-hero' }, [
+      edKicker('WEDDING CEREMONY'),
+      h('div', { class: 'ed-hero-frame' }, [
+        photoBlock(data, opts, 0, 'ed-hero-photo'),
+        h('div', { class: 'ed-hero-overlay' }, [taglineField(data, opts)]),
+      ]),
+      h('div', { class: 'ed-hero-names' }, [namesField(data, opts, true)]),
+    ]);
+  }
+
+  function editorialInvitation(data, opts) {
+    return h('div', { class: 'ed-invitation' }, [
+      edKicker('INVITATION'),
+      h('div', { class: 'ed-invitation-title' }, '소중한 분들을 초대합니다'),
+      greetingBlock(data, opts),
+    ]);
+  }
+
+  function editorialParents(data, opts) {
+    const editable = opts && opts.editable;
+    const hasAny = [data.groomFather, data.groomMother, data.brideFather, data.brideMother].some(v => v && v.trim());
+    if (!editable && !hasAny) return null;
+    const line = (fatherField, motherField, role, name) => h('div', { class: 'ed-parent-line' }, [
+      textField(data[fatherField], opts, v => opts.onText(fatherField, v), { cls: 'ed-parent-input', placeholder: '아버지 성함' }),
+      ' · ',
+      textField(data[motherField], opts, v => opts.onText(motherField, v), { cls: 'ed-parent-input', placeholder: '어머니 성함' }),
+      `의 ${role} `,
+      h('b', {}, name || ''),
+    ]);
+    return h('div', { class: 'ed-parents' }, [
+      line('groomFather', 'groomMother', '아들', data.groom),
+      line('brideFather', 'brideMother', '딸', data.bride),
+    ]);
+  }
+
+  function editorialContactBtn(data, opts) {
+    const editable = opts && opts.editable;
+    const hasPhone = data.contactPhone && data.contactPhone.trim();
+    if (!editable && !hasPhone) return null;
+    if (editable) {
+      return h('div', { class: 'ed-contact-edit' }, [
+        h('span', { class: 'ed-contact-edit-label' }, '연락처: '),
+        textField(data.contactPhone, opts, v => opts.onText('contactPhone', v), { cls: 'venue-phone-text', placeholder: '전화번호' }),
+      ]);
+    }
+    return h('a', { class: 'ed-contact-btn', href: `tel:${data.contactPhone}` }, [phoneIcon(), ' 연락하기']);
+  }
+
+  function editorialTimeline(data, opts) {
+    const weddingYear = data.date ? data.date.split('-')[0] : '';
+    return h('div', { class: 'ed-timeline' }, [
+      h('div', { class: 'ed-timeline-title' }, ['Two Hearts', h('br'), 'One Story']),
+      h('div', { class: 'ed-timeline-years' }, [
+        textField(data.relationshipStartYear, opts, v => opts.onText('relationshipStartYear', v), { cls: 'ed-year-input', placeholder: '시작 연도' }),
+        h('div', { class: 'ed-timeline-bar' }),
+        h('div', { class: 'ed-year-end' }, weddingYear),
+      ]),
+    ]);
+  }
+
+  function editorialCalendar(data) {
+    if (!data.date) return null;
+    let d;
+    try { d = new Date(`${data.date}T00:00:00+09:00`); } catch (e) { return null; }
+    if (isNaN(d.getTime())) return null;
+    const year = d.getFullYear(), month = d.getMonth();
+    const firstDow = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const dowLabels = ['일', '월', '화', '수', '목', '금', '토'];
+    const headRow = h('div', { class: 'ed-cal-row ed-cal-head' },
+      dowLabels.map((w, i) => h('div', { class: 'ed-cal-cell' + (i === 0 ? ' sun' : i === 6 ? ' sat' : '') }, w)));
+    const cells = [];
+    for (let i = 0; i < firstDow; i++) cells.push(h('div', { class: 'ed-cal-cell empty' }, ''));
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dow = (firstDow + day - 1) % 7;
+      cells.push(h('div', {
+        class: 'ed-cal-cell' + (day === d.getDate() ? ' wedding' : '') + (dow === 0 ? ' sun' : dow === 6 ? ' sat' : ''),
+      }, String(day)));
+    }
+    const rows = [headRow];
+    for (let i = 0; i < cells.length; i += 7) rows.push(h('div', { class: 'ed-cal-row' }, cells.slice(i, i + 7)));
+    return h('div', { class: 'ed-calendar' }, rows);
+  }
+
+  // Live-ticking DAYS/HOUR/MIN/SEC. Only ticks in guest (read-only) view —
+  // the editor re-renders far too often (every keystroke elsewhere, every
+  // photo change) to safely own a running interval without leaking timers.
+  let edCountdownTimer = null;
+  function editorialCountdown(data, opts) {
+    const dayNum = h('div', { class: 'ed-cd-num' }, '0');
+    const hourNum = h('div', { class: 'ed-cd-num' }, '0');
+    const minNum = h('div', { class: 'ed-cd-num' }, '0');
+    const secNum = h('div', { class: 'ed-cd-num' }, '0');
+    const label = h('div', { class: 'ed-cd-label' }, '');
+    const unit = (numEl, lab) => h('div', { class: 'ed-cd-unit' }, [numEl, h('div', { class: 'ed-cd-lab' }, lab)]);
+    const wrap = h('div', { class: 'ed-countdown' }, [
+      h('div', { class: 'ed-cd-row' }, [unit(dayNum, 'DAYS'), unit(hourNum, 'HOUR'), unit(minNum, 'MIN'), unit(secNum, 'SEC')]),
+      label,
+    ]);
+
+    let target = null;
+    try { target = new Date(`${data.date}T${data.time || '00:00'}:00+09:00`); } catch (e) {}
+    const tick = () => {
+      if (!target || isNaN(target.getTime())) return;
+      const diff = target - new Date();
+      if (diff <= 0) {
+        dayNum.textContent = '0'; hourNum.textContent = '0'; minNum.textContent = '0'; secNum.textContent = '0';
+        label.textContent = `${data.bride || ''}, ${data.groom || ''}의 결혼식 날입니다!`;
+        if (edCountdownTimer) clearInterval(edCountdownTimer);
+        return;
+      }
+      const totalSec = Math.floor(diff / 1000);
+      dayNum.textContent = String(Math.floor(totalSec / 86400));
+      hourNum.textContent = String(Math.floor((totalSec % 86400) / 3600)).padStart(2, '0');
+      minNum.textContent = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+      secNum.textContent = String(totalSec % 60).padStart(2, '0');
+      label.textContent = `${data.bride || ''}, ${data.groom || ''}의 결혼식이 ${Math.ceil(diff / 86400000)}일 남았습니다.`;
+    };
+    tick();
+    if (!(opts && opts.editable)) {
+      if (edCountdownTimer) clearInterval(edCountdownTimer);
+      edCountdownTimer = setInterval(tick, 1000);
+    }
+    return wrap;
+  }
+
+  function editorialJoinUs(data) {
+    let d = null;
+    try { d = new Date(`${data.date}T${data.time || '00:00'}:00+09:00`); } catch (e) {}
+    const valid = d && !isNaN(d.getTime());
+    const day = valid ? String(d.getDate()).padStart(2, '0') : '';
+    const monthName = valid ? d.toLocaleDateString('en-US', { month: 'long' }).toUpperCase() : '';
+    const dow = valid ? d.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase() : '';
+    const year = valid ? d.getFullYear() : '';
+    const hh = data.time ? Number(data.time.split(':')[0]) : null;
+    const mm = data.time ? data.time.split(':')[1] : null;
+    const period = hh !== null ? (hh < 12 ? 'AM' : 'PM') : '';
+    const hour12 = hh !== null ? (hh % 12 === 0 ? 12 : hh % 12) : '';
+    return h('div', { class: 'ed-joinus' }, [
+      h('div', { class: 'ed-joinus-title' }, 'JOIN US AS WE BECOME ONE'),
+      h('div', { class: 'ed-joinus-grid' }, [
+        h('div', {}, String(day)), h('div', {}, monthName), h('div', {}, String(year)),
+        h('div', {}, dow), h('div', {}, hh !== null ? `${period} ${hour12}:${mm}` : ''),
+      ]),
+    ]);
+  }
+
+  function editorialCarousel(data, opts) {
+    const editable = opts && opts.editable;
+    const photos = data.photos || [];
+    if (!editable && !photos.length) return null;
+    let idx = 0;
+    const frame = h('div', { class: 'ed-carousel-frame' });
+    const renderSlide = () => {
+      frame.innerHTML = '';
+      if (photos.length) frame.append(photoBlock(data, opts, idx, 'ed-carousel-img'));
+      else if (editable) frame.append(addPhotoTile(opts, 'ed-carousel-img'));
+    };
+    renderSlide();
+    const prevBtn = h('button', { class: 'ed-carousel-nav prev', type: 'button', title: '이전' }, '‹');
+    const nextBtn = h('button', { class: 'ed-carousel-nav next', type: 'button', title: '다음' }, '›');
+    prevBtn.addEventListener('click', e => { e.stopPropagation(); if (!photos.length) return; idx = (idx - 1 + photos.length) % photos.length; renderSlide(); });
+    nextBtn.addEventListener('click', e => { e.stopPropagation(); if (!photos.length) return; idx = (idx + 1) % photos.length; renderSlide(); });
+    const nav = photos.length > 1 ? [prevBtn, nextBtn] : [];
+
+    const tools = [];
+    if (editable && photos.length && photos.length < (opts.maxPhotos || 6)) {
+      const addBtn = h('button', { class: 'ed-carousel-add', type: 'button' }, '+ 사진 추가');
+      addBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        const fi = document.createElement('input');
+        fi.type = 'file'; fi.accept = 'image/*';
+        fi.onchange = () => { if (fi.files[0]) opts.onPhotoSelect(-1, fi.files[0]); };
+        fi.click();
+      });
+      tools.push(addBtn);
+    }
+
+    return h('section', { class: 'block' }, [
+      edKicker('GALLERY'),
+      h('div', { class: 'block-title' }, '웨딩 갤러리'),
+      h('div', { class: 'ed-carousel' }, [frame, ...nav]),
+      tools.length ? h('div', { class: 'ed-carousel-tools' }, tools) : null,
+    ]);
+  }
+
+  function edAccountRow(data, opts, side) {
+    const holderField = side === 'groom' ? 'groomAccountHolder' : 'brideAccountHolder';
+    const bankField = side === 'groom' ? 'groomBank' : 'brideBank';
+    const acctField = side === 'groom' ? 'groomBankAccount' : 'brideBankAccount';
+    const defaultName = side === 'groom' ? data.groom : data.bride;
+    const editable = opts && opts.editable;
+    const account = data[acctField];
+
+    if (!editable && !(data[bankField] && data[bankField].trim()) && !(account && account.trim())) {
+      return h('div', { class: 'ed-acct-empty' }, '등록된 계좌 정보가 없습니다.');
+    }
+
+    const nameEl = textField(data[holderField] || defaultName, opts, v => opts.onText(holderField, v), { cls: 'ed-acct-name', placeholder: '이름' });
+    const bankEl = textField(data[bankField], opts, v => opts.onText(bankField, v), { cls: 'ed-acct-bank', placeholder: '은행명' });
+    const acctEl = textField(account, opts, v => opts.onText(acctField, v), { cls: 'ed-acct-num', placeholder: '계좌번호' });
+    const row = h('div', { class: 'ed-acct-row' }, [
+      nameEl,
+      h('div', { class: 'ed-acct-line' }, [bankEl, ' ', acctEl]),
+    ]);
+    if (!editable && account && account.trim()) {
+      const copyBtn = h('button', { class: 'ed-acct-copy', type: 'button' }, '복사');
+      copyBtn.addEventListener('click', () => {
+        if (!navigator.clipboard) return;
+        navigator.clipboard.writeText(account).then(() => {
+          copyBtn.textContent = '복사됨';
+          setTimeout(() => { copyBtn.textContent = '복사'; }, 1500);
+        }).catch(() => {});
+      });
+      row.append(copyBtn);
+    }
+    return row;
+  }
+
+  function editorialAccounts(data, opts) {
+    const groomPanel = h('div', { class: 'ed-acct-panel active' }, [edAccountRow(data, opts, 'groom')]);
+    const bridePanel = h('div', { class: 'ed-acct-panel' }, [edAccountRow(data, opts, 'bride')]);
+    const groomTab = h('button', { class: 'ed-acct-tab active', type: 'button' }, '신랑측');
+    const brideTab = h('button', { class: 'ed-acct-tab', type: 'button' }, '신부측');
+    groomTab.addEventListener('click', () => {
+      groomTab.classList.add('active'); brideTab.classList.remove('active');
+      groomPanel.classList.add('active'); bridePanel.classList.remove('active');
+    });
+    brideTab.addEventListener('click', () => {
+      brideTab.classList.add('active'); groomTab.classList.remove('active');
+      bridePanel.classList.add('active'); groomPanel.classList.remove('active');
+    });
+    return h('section', { class: 'block' }, [
+      edKicker('ACCOUNT'),
+      h('div', { class: 'block-title' }, '마음 전하실 곳'),
+      h('div', { class: 'account-note' }, [
+        textField(data.accountNote, opts, v => opts.onText('accountNote', v), { multiline: true, rows: 2, cls: 'account-input' }),
+      ]),
+      h('div', { class: 'ed-acct-tabs' }, [groomTab, brideTab]),
+      h('div', { class: 'ed-acct-panels' }, [groomPanel, bridePanel]),
+    ]);
+  }
+
+  function editorialShareBtn(data) {
+    if (typeof navigator === 'undefined' || !navigator.share) return null;
+    const btn = h('button', { class: 'ed-share-btn', type: 'button' }, '청첩장 공유하기');
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      navigator.share({
+        title: `${data.groom} ♥ ${data.bride} 결혼합니다`,
+        text: `${data.groom} ♥ ${data.bride}의 결혼식에 초대합니다.`,
+        url: location.href,
+      }).catch(() => {});
+    });
+    return btn;
+  }
+
+  function buildEditorial(data, opts) {
+    const pad = h('div', { class: 'ed-pad' });
+    pad.append(editorialHero(data, opts));
+    pad.append(editorialInvitation(data, opts));
+    const parents = editorialParents(data, opts);
+    if (parents) pad.append(parents);
+    const contact = editorialContactBtn(data, opts);
+    if (contact) pad.append(contact);
+    pad.append(divider());
+    pad.append(editorialTimeline(data, opts));
+    pad.append(h('div', { class: 'ed-date-line' }, formatDateLine(data)));
+    const cal = editorialCalendar(data);
+    if (cal) pad.append(cal);
+    pad.append(editorialCountdown(data, opts));
+    pad.append(editorialJoinUs(data));
+    pad.append(divider());
+    pad.append(mapSection(data, opts));
+    const carousel = editorialCarousel(data, opts);
+    if (carousel) pad.append(carousel);
+    pad.append(divider());
+    pad.append(editorialAccounts(data, opts));
+    pad.append(footerBlock(data));
+    const share = editorialShareBtn(data);
+    if (share) pad.append(share);
+    return pad;
+  }
+
+  const BUILDERS = { classic: buildClassic, cover: buildCover, gallery: buildGallery, polaroid: buildPolaroid, minimal: buildMinimal, editorial: buildEditorial };
 
   function candleIcon() {
     return iconFromSvg(
@@ -566,7 +906,7 @@ window.InviteRender = (function () {
   function buildInviteCard(data, opts) {
     opts = opts || {};
     const build = BUILDERS[data.layout] || buildClassic;
-    const root = h('div', { class: 'ir-root' });
+    const root = h('div', { class: 'ir-root', 'data-layout': data.layout || 'classic' });
     COLOR_FIELDS.forEach(({ field, varName }) => {
       if (data[field]) root.style.setProperty(varName, data[field]);
     });
@@ -709,6 +1049,7 @@ window.InviteRender = (function () {
   transition: opacity .15s; text-align: center; padding: 4px;
 }
 .ir-root .ir-photo-wrap:hover .ir-photo-overlay { opacity: 1; }
+.ir-root .ir-photo-empty .ir-photo-overlay { opacity: 1; position: static; background: none; color: var(--ir-muted); }
 .ir-root .ir-photo-file-input { display: none; }
 .ir-root .ir-photo-remove {
   position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%;
@@ -800,6 +1141,126 @@ window.InviteRender = (function () {
   border-radius: 50% 50% 0 0 / 50px 50px 0 0; overflow: hidden;
 }
 .ir-env-photo-peek img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* editorial theme */
+.ir-root[data-layout="editorial"] {
+  --ir-font-head: 'Playfair Display', 'Nanum Myeongjo', serif;
+  --ir-font-script: 'Playfair Display', serif;
+}
+.ir-root[data-layout="editorial"] .cover2-tagline { font-style: italic; font-weight: 600; }
+.ed-pad { padding: 0 0 30px; }
+.ed-kicker {
+  font-family: var(--ir-font-head); font-size: 0.72rem; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--ir-muted); text-align: center; margin-bottom: 8px;
+}
+.ed-hero { padding: 30px 24px 0; text-align: center; }
+.ed-hero-frame {
+  position: relative; margin: 18px auto 0; width: 82%; aspect-ratio: 4/5;
+  background: var(--ir-panel); padding: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+  transform: rotate(-1.5deg);
+}
+.ed-hero-photo, .ed-hero-frame .ir-photo-wrap { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ed-hero-overlay {
+  position: absolute; inset: 10px; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.08);
+}
+.ed-hero-overlay .cover2-tagline { color: #fff; font-size: 2.6rem; text-shadow: 0 2px 12px rgba(0,0,0,0.35); text-align: center; }
+.ed-hero-overlay .ir-edit-input { max-width: 92% !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ed-hero-names {
+  margin-top: 22px; font-family: var(--ir-font-head); font-size: 0.95rem;
+  letter-spacing: 0.28em; text-transform: uppercase; color: var(--ir-muted);
+}
+.ed-hero-names .names { font-size: inherit; letter-spacing: inherit; text-transform: inherit; font-weight: 400; }
+.ed-hero-names .ir-name-input { text-transform: uppercase; font-family: inherit; font-weight: 400; }
+
+.ed-invitation { padding: 44px 30px 0; text-align: center; }
+.ed-invitation-title { font-family: var(--ir-font-head); font-size: 1.3rem; font-weight: 700; margin-bottom: 18px; }
+
+.ed-parents { padding: 30px 30px 0; text-align: center; }
+.ed-parent-line { font-size: 0.92rem; color: var(--ir-text); line-height: 2; }
+.ed-parent-input { color: var(--ir-text); }
+
+.ed-contact-btn, .ed-contact-edit {
+  display: flex; align-items: center; justify-content: center; gap: 8px; margin: 24px auto 0; width: fit-content;
+  padding: 11px 26px; border: 1px solid var(--ir-border); border-radius: 999px;
+  color: var(--ir-text); font-size: 0.85rem; text-decoration: none;
+}
+
+.ed-timeline { padding: 44px 30px 0; text-align: center; }
+.ed-timeline-title {
+  font-family: var(--ir-font-head); font-style: italic; font-weight: 700;
+  font-size: 2.2rem; line-height: 1.25; margin-bottom: 20px;
+}
+.ed-timeline-years { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.ed-year-input {
+  font-family: var(--ir-font-body); font-size: 0.85rem; color: var(--ir-muted);
+  width: 4.2em !important; text-align: center;
+}
+.ed-timeline-bar { width: 60px; height: 1px; background: var(--ir-border); }
+.ed-year-end { font-size: 0.85rem; color: var(--ir-muted); }
+
+.ed-date-line { text-align: center; font-size: 0.85rem; color: var(--ir-muted); margin: 30px 0 16px; }
+
+.ed-calendar { margin: 0 30px 30px; border-top: 1px solid var(--ir-border); padding-top: 20px; }
+.ed-cal-row { display: grid; grid-template-columns: repeat(7, 1fr); }
+.ed-cal-head { margin-bottom: 8px; }
+.ed-cal-cell {
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; color: var(--ir-text); position: relative;
+}
+.ed-cal-head .ed-cal-cell { font-size: 0.7rem; font-weight: 700; color: var(--ir-muted); aspect-ratio: auto; }
+.ed-cal-cell.sun { color: var(--ir-accent); }
+.ed-cal-cell.wedding {
+  background: var(--ir-accent); color: #fff; border-radius: 50%; font-weight: 700;
+}
+
+.ed-countdown { text-align: center; padding: 0 30px 20px; }
+.ed-cd-row { display: flex; align-items: baseline; justify-content: center; gap: 18px; margin-bottom: 10px; }
+.ed-cd-num { font-family: var(--ir-font-head); font-size: 1.7rem; font-weight: 700; color: var(--ir-text); }
+.ed-cd-lab { font-size: 0.62rem; letter-spacing: 0.12em; color: var(--ir-muted); margin-top: 2px; }
+.ed-cd-label { font-size: 0.82rem; color: var(--ir-muted); }
+
+.ed-joinus { text-align: center; padding: 20px 30px 40px; color: var(--ir-accent); }
+.ed-joinus-title { font-family: var(--ir-font-head); font-weight: 700; letter-spacing: 0.06em; font-size: 0.95rem; margin-bottom: 14px; }
+.ed-joinus-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 20px; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.05em; }
+
+.ed-map-image-slot { width: 100%; aspect-ratio: 16/9; margin-bottom: 16px; border-radius: 10px; overflow: hidden; border: 1px dashed var(--ir-border); }
+
+.ed-carousel { position: relative; }
+.ed-carousel-frame { width: 100%; aspect-ratio: 4/5; background: var(--ir-panel-2); overflow: hidden; }
+.ed-carousel-img, .ed-carousel-frame .ir-photo-wrap { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ed-carousel-nav {
+  position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,0.85); border: none; font-size: 1.3rem; cursor: pointer; color: var(--ir-text);
+}
+.ed-carousel-nav.prev { left: 10px; }
+.ed-carousel-nav.next { right: 10px; }
+.ed-carousel-tools { text-align: center; padding-top: 10px; }
+.ed-carousel-add {
+  background: none; border: 1px solid var(--ir-border); border-radius: 999px; padding: 7px 16px;
+  font-size: 0.78rem; color: var(--ir-muted); cursor: pointer;
+}
+
+.ed-acct-tabs { display: flex; justify-content: center; gap: 0; margin: 20px 30px 0; border: 1px solid var(--ir-border); border-radius: 999px; overflow: hidden; }
+.ed-acct-tab { flex: 1; padding: 9px; background: var(--ir-panel); border: none; font-size: 0.82rem; color: var(--ir-muted); cursor: pointer; }
+.ed-acct-tab.active { background: var(--ir-accent); color: #fff; }
+.ed-acct-panels { margin: 0 30px; }
+.ed-acct-panel { display: none; text-align: center; padding: 18px 0; }
+.ed-acct-panel.active { display: block; }
+.ed-acct-row { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.ed-acct-name { font-weight: 700; }
+.ed-acct-line { display: flex; align-items: center; gap: 4px; color: var(--ir-muted); font-size: 0.85rem; }
+.ed-acct-copy {
+  margin-top: 6px; background: none; border: 1px solid var(--ir-border); border-radius: 999px;
+  padding: 5px 14px; font-size: 0.75rem; color: var(--ir-muted); cursor: pointer;
+}
+.ed-acct-empty { color: var(--ir-muted); font-size: 0.85rem; padding: 10px 0; }
+
+.ed-share-btn {
+  display: block; margin: 24px auto 0; padding: 12px 30px; border-radius: 999px;
+  background: var(--ir-btn-bg); border: 1px solid var(--ir-border); color: var(--ir-text);
+  font-size: 0.85rem; font-weight: 700; cursor: pointer;
+}
 `;
 
   if (!document.getElementById('ir-shared-style')) {
@@ -809,5 +1270,5 @@ window.InviteRender = (function () {
     document.head.appendChild(styleEl);
   }
 
-  return { DEFAULT_INVITE, LAYOUTS, COLOR_FIELDS, photoUrl, formatDateLine, buildInviteCard };
+  return { DEFAULT_INVITE, LAYOUTS, COLOR_FIELDS, THEME_PRESETS, photoUrl, formatDateLine, buildInviteCard };
 })();

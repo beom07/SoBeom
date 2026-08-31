@@ -12,7 +12,7 @@
 <script src="/invite-render.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Caveat:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #f5f5f7;
@@ -278,6 +278,14 @@
   .color-field input[type=color]::-webkit-color-swatch { border: none; border-radius: 50%; }
   .color-label { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
 
+  .envelope-msg-field { margin-bottom: 20px; }
+  .envelope-msg-label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+  .envelope-msg-field textarea {
+    width: 100%; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 12px; font-family: var(--font-body); font-size: 0.88rem; color: var(--text); resize: vertical;
+  }
+  .envelope-msg-field textarea:focus { border-color: var(--accent); outline: none; }
+
   .invite-frame-wrap { display: flex; justify-content: center; margin-bottom: 20px; }
   .invite-frame {
     width: 100%; max-width: 420px; border-radius: 28px; overflow: hidden;
@@ -427,9 +435,10 @@ const clearPasscode = () => localStorage.removeItem(PASSCODE_KEY);
 // ad-blocker), the rest of the app (청약/웨딩플랜) must keep working — only
 // the invitation editor itself should degrade.
 const InviteRenderSafe = window.InviteRender || {
-  DEFAULT_INVITE: { groom: '', bride: '', date: '', time: '', venue: '', greeting: '', accountNote: '', ddayLabel: '', layout: 'classic', photos: [], bgColor: '#fffdfa', textColor: '#4a3f33', accentColor: '#e0795c', boxColor: '#fbeee1', mutedColor: '#a5967e', btnColor: '#fbeee1' },
+  DEFAULT_INVITE: { groom: '', bride: '', date: '', time: '', venue: '', greeting: '', accountNote: '', ddayLabel: '', envelopeMessage: '', layout: 'classic', photos: [], bgColor: '#fffdfa', textColor: '#4a3f33', accentColor: '#e0795c', boxColor: '#fbeee1', mutedColor: '#a5967e', btnColor: '#fbeee1' },
   LAYOUTS: [],
   COLOR_FIELDS: [],
+  THEME_PRESETS: {},
   buildInviteCard: () => document.createTextNode(''),
 };
 let inviteState = { ...InviteRenderSafe.DEFAULT_INVITE };
@@ -526,6 +535,46 @@ function handleInvitePhotoRemove(index) {
   if (!confirm('이 사진을 삭제할까요?')) return;
   const slot = inviteState.photos[index];
   inviteState.photos.splice(index, 1);
+  scheduleInviteSync();
+  renderInviteManager();
+  if (slot) {
+    fetch(`/.netlify/functions/invite-photo?slot=${slot}`, {
+      method: 'DELETE', headers: { 'x-plan-passcode': getPasscode() },
+    }).catch(() => {});
+  }
+}
+
+// Single named slot (지도 이미지) — same upload pipeline as the photo gallery,
+// just stored under inviteState.mapImageSlot instead of the photos array.
+async function handleMapImageSelect(file) {
+  try {
+    const blob = await compressImage(file);
+    const newSlot = uid();
+    const res = await fetch(`/.netlify/functions/invite-photo?slot=${newSlot}`, {
+      method: 'POST',
+      headers: { 'content-type': 'image/jpeg', 'x-plan-passcode': getPasscode() },
+      body: blob,
+    });
+    if (!res.ok) throw new Error('upload failed: ' + res.status);
+    const oldSlot = inviteState.mapImageSlot;
+    inviteState.mapImageSlot = newSlot;
+    scheduleInviteSync();
+    renderInviteManager();
+    if (oldSlot) {
+      fetch(`/.netlify/functions/invite-photo?slot=${oldSlot}`, {
+        method: 'DELETE', headers: { 'x-plan-passcode': getPasscode() },
+      }).catch(() => {});
+    }
+  } catch (e) {
+    console.error(e);
+    alert('지도 이미지 업로드에 실패했습니다. 비밀번호가 올바른지 확인해주세요.');
+  }
+}
+
+function handleMapImageRemove() {
+  if (!confirm('지도 이미지를 삭제할까요?')) return;
+  const slot = inviteState.mapImageSlot;
+  inviteState.mapImageSlot = '';
   scheduleInviteSync();
   renderInviteManager();
   if (slot) {
@@ -1041,9 +1090,23 @@ function renderInviteManager() {
   const chips = InviteRenderSafe.LAYOUTS.map(l => el('button', {
     class: 'layout-chip' + (inviteState.layout === l.id ? ' active' : ''),
     title: l.desc,
-    onclick: () => { inviteState.layout = l.id; scheduleInviteSync(); renderInviteManager(); },
+    onclick: () => {
+      inviteState.layout = l.id;
+      const preset = InviteRenderSafe.THEME_PRESETS && InviteRenderSafe.THEME_PRESETS[l.id];
+      if (preset) Object.assign(inviteState, preset);
+      scheduleInviteSync();
+      renderInviteManager();
+    },
   }, l.label));
   main.append(el('div', { class: 'layout-chip-row' }, chips));
+
+  main.append(el('div', { class: 'envelope-msg-field' }, [
+    el('label', { class: 'envelope-msg-label' }, '봉투 인사말 (선택 — 비워두면 이름 기반 자동 문구)'),
+    el('textarea', {
+      rows: '2', placeholder: '예) 희범과 소진의 결혼식에\n소중한 분들을 초대합니다.',
+      oninput: e => { inviteState.envelopeMessage = e.target.value; scheduleInviteSync(); },
+    }, inviteState.envelopeMessage || ''),
+  ]));
 
   const colorFields = InviteRenderSafe.COLOR_FIELDS.map(({ field, label, varName }) => el('label', { class: 'color-field' }, [
     el('input', {
@@ -1065,6 +1128,8 @@ function renderInviteManager() {
     onDate: onInviteDate,
     onPhotoSelect: handleInvitePhotoSelect,
     onPhotoRemove: handleInvitePhotoRemove,
+    onMapImageSelect: handleMapImageSelect,
+    onMapImageRemove: handleMapImageRemove,
     maxPhotos: 6,
   };
   main.append(el('div', { class: 'invite-frame-wrap' }, [
