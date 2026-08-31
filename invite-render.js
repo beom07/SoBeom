@@ -1153,22 +1153,21 @@ window.InviteRender = (function () {
   font-family: var(--ir-font-head); font-size: 0.72rem; letter-spacing: 0.2em;
   text-transform: uppercase; color: var(--ir-muted); text-align: center; margin-bottom: 8px;
 }
-.ed-hero { padding: 30px 24px 0; text-align: center; }
+.ed-hero { padding-top: 30px; text-align: center; }
 .ed-hero-frame {
-  position: relative; margin: 18px auto 0; width: 82%; aspect-ratio: 4/5;
-  background: var(--ir-panel); padding: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.12);
-  transform: rotate(-1.5deg);
+  position: relative; margin-top: 18px; width: 100%; aspect-ratio: 4/5;
+  background: var(--ir-panel);
 }
 .ed-hero-photo, .ed-hero-frame .ir-photo-wrap { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ed-hero-overlay {
-  position: absolute; inset: 10px; display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.08);
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 20px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.05) 55%, rgba(0,0,0,0.4) 100%);
 }
-.ed-hero-overlay .cover2-tagline { color: #fff; font-size: 2.6rem; text-shadow: 0 2px 12px rgba(0,0,0,0.35); text-align: center; }
+.ed-hero-overlay .cover2-tagline { color: #fff; font-size: 2.8rem; text-shadow: 0 2px 14px rgba(0,0,0,0.4); text-align: center; }
 .ed-hero-overlay .ir-edit-input { max-width: 92% !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ed-hero-names {
   margin-top: 22px; font-family: var(--ir-font-head); font-size: 0.95rem;
-  letter-spacing: 0.28em; text-transform: uppercase; color: var(--ir-muted);
+  letter-spacing: 0.28em; text-transform: uppercase; color: var(--ir-muted); padding: 0 24px;
 }
 .ed-hero-names .names { font-size: inherit; letter-spacing: inherit; text-transform: inherit; font-weight: 400; }
 .ed-hero-names .ir-name-input { text-transform: uppercase; font-family: inherit; font-weight: 400; }
