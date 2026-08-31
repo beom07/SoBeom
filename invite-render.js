@@ -15,6 +15,7 @@ window.InviteRender = (function () {
     busInfo: '',
     tagline: "We're getting Married!",
     ddayLabel: '',
+    envelopeMessage: '',
     greeting: '두 사람이 하나의 마음으로 만나\n새로운 시작을 앞두고 있습니다.\n\n저희 두 사람의 첫 걸음을\n축복해 주시면 감사하겠습니다.',
     accountNote: '계좌번호는 추후 업데이트될 예정입니다.\n참석해 주시는 것만으로 큰 힘이 됩니다 🙏',
     layout: 'classic',
@@ -58,6 +59,31 @@ window.InviteRender = (function () {
     } catch (e) {
       return data.date || '';
     }
+  }
+
+  function formatDateCompact(data) {
+    try {
+      const d = new Date(`${data.date}T00:00:00+09:00`);
+      const yy = String(d.getFullYear()).slice(-2);
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const dow = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][d.getDay()];
+      return `${yy}.${mm}.${dd}.${dow}`;
+    } catch (e) {
+      return data.date || '';
+    }
+  }
+
+  // Attaches the correct Korean particle (과/와) based on whether the name's
+  // last syllable has a batchim (final consonant) — e.g. 희범 -> 희범과, 소진 -> 소진과.
+  function withGwaWa(name) {
+    if (!name) return name || '';
+    const last = name.charCodeAt(name.length - 1);
+    if (last >= 0xac00 && last <= 0xd7a3) {
+      const hasBatchim = (last - 0xac00) % 28 !== 0;
+      return name + (hasBatchim ? '과' : '와');
+    }
+    return name + '와';
   }
 
   function h(tag, attrs, children) {
@@ -486,33 +512,54 @@ window.InviteRender = (function () {
 
   const BUILDERS = { classic: buildClassic, cover: buildCover, gallery: buildGallery, polaroid: buildPolaroid, minimal: buildMinimal };
 
-  // Envelope-open intro (guest view only, once per page load) — tap to fold
-  // the flap open and reveal the invitation already rendered underneath.
+  function candleIcon() {
+    return iconFromSvg(
+      '<path d="M12 2.2v1.6M8.6 4l1 1M15.4 4l-1 1M6.6 5.6l.9.7M17.4 5.6l-.9.7"/>' +
+      '<circle cx="12" cy="6.6" r="1"/>' +
+      '<rect x="9.5" y="9.2" width="5" height="12.6" rx="1.4"/>',
+      'ir-env-icon-svg'
+    );
+  }
+
+  // Envelope intro (guest view only, once per page load): tap the wax seal to
+  // reveal a short greeting preview, then tap/scroll again to slide the whole
+  // envelope layer up off-screen and reveal the invitation already rendered
+  // underneath (no drag-tracking needed — any tap advances the stage).
   let envelopeShown = false;
   function buildEnvelopeOverlay(data) {
     const overlay = h('div', { class: 'ir-envelope-overlay' });
-    const envelope = h('div', { class: 'ir-envelope' }, [
-      h('div', { class: 'ir-envelope-body' }, [
-        h('div', { class: 'ir-envelope-names' }, [
-          data.groom || '', h('span', { class: 'heart' }, '♥'), data.bride || '',
-        ]),
-        h('div', { class: 'ir-envelope-hint' }, '눌러서 초대장을 열어보세요'),
-      ]),
-      h('div', { class: 'ir-envelope-flap' }),
-      h('div', { class: 'ir-envelope-seal' }, '♥'),
+    const fold = h('div', { class: 'ir-env-fold' });
+    const seal = h('button', { class: 'ir-env-seal', type: 'button', 'aria-label': '초대장 열기' }, '♥');
+    const hint = h('div', { class: 'ir-env-hint' }, '터치하여 열기');
+
+    const autoMsg = `${withGwaWa(data.groom)} ${data.bride || ''}의 결혼식에\n소중한 분들을 초대합니다.`;
+    const msgText = (data.envelopeMessage && data.envelopeMessage.trim()) ? data.envelopeMessage : autoMsg;
+    const greeting = h('div', { class: 'ir-env-greeting' }, [
+      candleIcon(),
+      h('div', { class: 'ir-env-kicker' }, 'Wedding Invitation'),
+      h('div', { class: 'ir-env-msg' }, msgText),
+      h('div', { class: 'ir-env-date' }, formatDateCompact(data)),
+      h('div', { class: 'ir-env-chevron' }, '⌃'),
     ]);
-    const open = () => {
-      if (envelope.classList.contains('ir-envelope-open')) return;
-      envelope.classList.add('ir-envelope-open');
-      document.body.style.overflow = '';
-      setTimeout(() => {
-        overlay.classList.add('ir-envelope-fade');
-        setTimeout(() => overlay.remove(), 650);
-      }, 550);
+
+    overlay.append(fold, seal, hint, greeting);
+    const photoSlot = data.photos && data.photos[0];
+    if (photoSlot) overlay.append(h('div', { class: 'ir-env-photo-peek' }, [photoNode(photoSlot, '')]));
+
+    let stage = 1;
+    const advance = () => {
+      if (stage === 1) {
+        stage = 2;
+        overlay.classList.add('ir-env-stage-2');
+      } else if (stage === 2) {
+        stage = 3;
+        overlay.classList.add('ir-env-slide-up');
+        document.body.style.overflow = '';
+        setTimeout(() => overlay.remove(), 750);
+      }
     };
-    overlay.addEventListener('click', open);
+    overlay.addEventListener('click', advance);
     document.body.style.overflow = 'hidden';
-    overlay.append(envelope);
     return overlay;
   }
 
@@ -700,44 +747,59 @@ window.InviteRender = (function () {
   color: rgba(255,255,255,0.85); font-size: 0.82rem; font-weight: 600; letter-spacing: 0.04em;
 }
 
-/* envelope-open intro */
+/* envelope intro: wax-seal cover -> short greeting preview -> slides away */
 .ir-envelope-overlay {
-  position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center;
-  background: var(--ir-paper, #fffdfa); cursor: pointer; transition: opacity .6s ease;
+  position: fixed; inset: 0; z-index: 500; overflow: hidden; cursor: pointer;
+  background: var(--ir-paper, #fffdfa); display: flex; align-items: center; justify-content: center;
+  transition: transform .7s cubic-bezier(.4,0,.2,1);
 }
-.ir-envelope-overlay.ir-envelope-fade { opacity: 0; pointer-events: none; }
-.ir-envelope { position: relative; width: 240px; perspective: 800px; }
-.ir-envelope-body {
-  position: relative; width: 100%; aspect-ratio: 3/2;
-  background: var(--ir-panel, #fff); border: 1px solid var(--ir-border, #ecdfce); border-radius: 6px;
-  overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-  padding-bottom: 18px; box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+.ir-envelope-overlay.ir-env-slide-up { transform: translateY(-100%); }
+
+.ir-env-fold { position: absolute; inset: 0; pointer-events: none; }
+.ir-env-fold::before, .ir-env-fold::after {
+  content: ''; position: absolute; top: 50%; left: 50%; width: 200vmax; height: 1px;
+  background: var(--ir-border, #ecdfce);
 }
-.ir-envelope-names {
-  font-family: var(--ir-font-head); font-weight: 700; font-size: 0.95rem; color: var(--ir-text);
-  display: flex; gap: 6px; align-items: center; margin-bottom: 6px;
+.ir-env-fold::before { transform: translate(-50%, -50%) rotate(45deg); }
+.ir-env-fold::after { transform: translate(-50%, -50%) rotate(-45deg); }
+
+.ir-env-seal {
+  position: relative; z-index: 2; width: 84px; height: 84px; border-radius: 50%; border: none; padding: 0;
+  background: var(--ir-accent);
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--ir-accent) 80%, white), var(--ir-accent) 55%, color-mix(in srgb, var(--ir-accent) 60%, black) 100%);
+  display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.7rem;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.22), inset 0 2px 4px rgba(255,255,255,0.35);
+  cursor: pointer; transition: opacity .3s ease;
 }
-.ir-envelope-names .heart { color: var(--ir-accent); }
-.ir-envelope-hint {
-  font-size: 0.72rem; color: var(--ir-muted); letter-spacing: 0.04em;
-  animation: ir-envelope-pulse 1.8s ease-in-out infinite;
+.ir-env-hint {
+  position: absolute; top: calc(50% + 68px); left: 50%; transform: translateX(-50%);
+  font-size: 0.72rem; color: var(--ir-muted); letter-spacing: 0.15em; z-index: 2;
+  transition: opacity .3s ease;
 }
-@keyframes ir-envelope-pulse { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
-.ir-envelope-flap {
-  position: absolute; top: 0; left: 0; width: 100%; height: 62%;
-  background: var(--ir-panel-2, #fbeee1); border: 1px solid var(--ir-border, #ecdfce); border-top: none;
-  clip-path: polygon(0 0, 100% 0, 50% 100%);
-  transform-origin: top center; transform: rotateX(0deg); transform-style: preserve-3d;
-  transition: transform .6s ease;
+.ir-envelope-overlay.ir-env-stage-2 .ir-env-seal,
+.ir-envelope-overlay.ir-env-stage-2 .ir-env-hint { opacity: 0; pointer-events: none; }
+
+.ir-env-greeting {
+  position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px; padding: 40px 30px;
+  text-align: center; opacity: 0; pointer-events: none; transition: opacity .5s ease;
 }
-.ir-envelope-seal {
-  position: absolute; top: 58%; left: 50%; transform: translate(-50%, -50%);
-  width: 34px; height: 34px; border-radius: 50%; background: var(--ir-accent); color: #fff;
-  display: flex; align-items: center; justify-content: center; font-size: 1rem;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.15); z-index: 2; transition: opacity .25s ease;
+.ir-envelope-overlay.ir-env-stage-2 .ir-env-greeting { opacity: 1; pointer-events: auto; }
+.ir-env-icon-svg { width: 26px; height: 26px; color: var(--ir-muted); margin-bottom: 4px; }
+.ir-env-kicker { font-size: 0.7rem; letter-spacing: 0.22em; color: var(--ir-muted); }
+.ir-env-msg {
+  font-family: var(--ir-font-head); font-size: 1.05rem; line-height: 1.7; color: var(--ir-text);
+  white-space: pre-line; margin: 6px 0;
 }
-.ir-envelope-open .ir-envelope-flap { transform: rotateX(-160deg); }
-.ir-envelope-open .ir-envelope-seal { opacity: 0; }
+.ir-env-date { font-size: 0.85rem; letter-spacing: 0.1em; color: var(--ir-muted); margin-bottom: 6px; }
+.ir-env-chevron { font-size: 1.2rem; color: var(--ir-accent); animation: ir-env-bounce 1.6s ease-in-out infinite; }
+@keyframes ir-env-bounce { 0%, 100% { transform: translateY(0); opacity: .6; } 50% { transform: translateY(-6px); opacity: 1; } }
+
+.ir-env-photo-peek {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 28%; z-index: 1;
+  border-radius: 50% 50% 0 0 / 50px 50px 0 0; overflow: hidden;
+}
+.ir-env-photo-peek img { width: 100%; height: 100%; object-fit: cover; display: block; }
 `;
 
   if (!document.getElementById('ir-shared-style')) {
