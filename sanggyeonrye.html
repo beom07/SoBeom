@@ -57,6 +57,34 @@
     background: rgba(255,255,255,0.15); color: #fff; border: none; font-size: 1.1rem; cursor: pointer;
   }
   .lightbox-close:hover { background: rgba(255,255,255,0.28); }
+
+  /* envelope intro: wax-seal cover, opens like a real flap (3D rotate on its
+     top edge) to reveal the intro text + slideshow already rendered beneath */
+  .sg-envelope-perspective { position: fixed; inset: 0; z-index: 500; perspective: 1400px; }
+  .sg-envelope-overlay {
+    position: absolute; inset: 0; overflow: hidden; cursor: pointer;
+    background: var(--sg-paper); display: flex; align-items: center; justify-content: center;
+    transform-origin: top center; transform-style: preserve-3d;
+    transition: transform .85s cubic-bezier(.5,0,.15,1), opacity .6s ease .18s;
+  }
+  .sg-envelope-overlay.sg-env-opening { transform: rotateX(-112deg) translateY(-3%) scale(0.98); opacity: 0; }
+  .sg-env-fold { position: absolute; inset: 0; pointer-events: none; }
+  .sg-env-fold::before, .sg-env-fold::after {
+    content: ''; position: absolute; top: 50%; left: 50%; width: 200vmax; height: 1px; background: var(--sg-border);
+  }
+  .sg-env-fold::before { transform: translate(-50%, -50%) rotate(45deg); }
+  .sg-env-fold::after { transform: translate(-50%, -50%) rotate(-45deg); }
+  .sg-env-seal {
+    position: relative; z-index: 2; width: 84px; height: 84px; border-radius: 50%; border: none; padding: 0;
+    background: var(--sg-accent);
+    background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--sg-accent) 80%, white), var(--sg-accent) 55%, color-mix(in srgb, var(--sg-accent) 60%, black) 100%);
+    display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.7rem;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.22), inset 0 2px 4px rgba(255,255,255,0.35); cursor: pointer;
+  }
+  .sg-env-hint {
+    position: absolute; top: calc(50% + 68px); left: 50%; transform: translateX(-50%);
+    font-size: 0.72rem; color: var(--sg-muted); letter-spacing: 0.15em; z-index: 2;
+  }
 </style>
 </head>
 <body>
@@ -131,7 +159,25 @@ function render(data) {
   }
 }
 
+function showEnvelope() {
+  const persp = el('div', { class: 'sg-envelope-perspective' });
+  const overlay = el('div', { class: 'sg-envelope-overlay' }, [
+    el('div', { class: 'sg-env-fold' }),
+    el('button', { class: 'sg-env-seal', type: 'button', 'aria-label': '자료 열기' }, '♥'),
+    el('div', { class: 'sg-env-hint' }, '터치하여 열기'),
+  ]);
+  persp.append(overlay);
+  persp.addEventListener('click', () => {
+    overlay.classList.add('sg-env-opening');
+    document.body.style.overflow = '';
+    setTimeout(() => persp.remove(), 900);
+  });
+  document.body.style.overflow = 'hidden';
+  document.body.appendChild(persp);
+}
+
 render({ introText: '', slides: [] });
+showEnvelope();
 
 fetch('/.netlify/functions/sanggyeonrye')
   .then(res => res.ok ? res.json() : null)

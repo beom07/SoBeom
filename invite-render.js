@@ -867,6 +867,9 @@ window.InviteRender = (function () {
   // underneath (no drag-tracking needed — any tap advances the stage).
   let envelopeShown = false;
   function buildEnvelopeOverlay(data) {
+    // A perspective wrapper is required for the final rotateX "flap opening"
+    // to render as real 3D foreshortening rather than a flat squash.
+    const persp = h('div', { class: 'ir-envelope-perspective' });
     const overlay = h('div', { class: 'ir-envelope-overlay' });
     const fold = h('div', { class: 'ir-env-fold' });
     const seal = h('button', { class: 'ir-env-seal', type: 'button', 'aria-label': '초대장 열기' }, '♥');
@@ -885,6 +888,7 @@ window.InviteRender = (function () {
     overlay.append(fold, seal, hint, greeting);
     const photoSlot = data.photos && data.photos[0];
     if (photoSlot) overlay.append(h('div', { class: 'ir-env-photo-peek' }, [photoNode(photoSlot, '')]));
+    persp.append(overlay);
 
     let stage = 1;
     const advance = () => {
@@ -893,14 +897,14 @@ window.InviteRender = (function () {
         overlay.classList.add('ir-env-stage-2');
       } else if (stage === 2) {
         stage = 3;
-        overlay.classList.add('ir-env-slide-up');
+        overlay.classList.add('ir-env-opening');
         document.body.style.overflow = '';
-        setTimeout(() => overlay.remove(), 750);
+        setTimeout(() => persp.remove(), 900);
       }
     };
-    overlay.addEventListener('click', advance);
+    persp.addEventListener('click', advance);
     document.body.style.overflow = 'hidden';
-    return overlay;
+    return persp;
   }
 
   function buildInviteCard(data, opts) {
@@ -1088,13 +1092,19 @@ window.InviteRender = (function () {
   color: rgba(255,255,255,0.85); font-size: 0.82rem; font-weight: 600; letter-spacing: 0.04em;
 }
 
-/* envelope intro: wax-seal cover -> short greeting preview -> slides away */
+/* envelope intro: wax-seal cover -> short greeting preview -> opens like a
+   real envelope flap (3D rotate on its top edge, not a flat slide) */
+.ir-envelope-perspective { position: fixed; inset: 0; z-index: 500; perspective: 1400px; }
 .ir-envelope-overlay {
-  position: fixed; inset: 0; z-index: 500; overflow: hidden; cursor: pointer;
+  position: absolute; inset: 0; overflow: hidden; cursor: pointer;
   background: var(--ir-paper, #fffdfa); display: flex; align-items: center; justify-content: center;
-  transition: transform .7s cubic-bezier(.4,0,.2,1);
+  transform-origin: top center; transform-style: preserve-3d;
+  transition: transform .85s cubic-bezier(.5,0,.15,1), opacity .6s ease .18s;
 }
-.ir-envelope-overlay.ir-env-slide-up { transform: translateY(-100%); }
+.ir-envelope-overlay.ir-env-opening {
+  transform: rotateX(-112deg) translateY(-3%) scale(0.98);
+  opacity: 0;
+}
 
 .ir-env-fold { position: absolute; inset: 0; pointer-events: none; }
 .ir-env-fold::before, .ir-env-fold::after {
