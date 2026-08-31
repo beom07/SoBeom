@@ -617,59 +617,61 @@ function handleMapImageRemove() {
   }
 }
 
-// Envelope cover image: a single well-known slot (not tracked in inviteState
-// at all) shared by both /invite and /meeting — each page just tries to load
-// this exact slot directly and falls back to a plain card if it 404s, so no
-// data-blob field is needed to know whether one was uploaded.
-const ENVELOPE_IMAGE_SLOT = 'envelope-cover';
+// Envelope cover image: a single well-known slot per page (not tracked in
+// inviteState/sgState at all) — /invite and /meeting each just try to load
+// their own exact slot directly and fall back to a plain card if it 404s,
+// so no data-blob field is needed to know whether one was uploaded. 청첩장
+// and 상견례 get separate uploads/slots since they're different occasions.
+const INVITE_ENVELOPE_IMAGE_SLOT = 'envelope-cover';
+const SG_ENVELOPE_IMAGE_SLOT = 'envelope-cover-sg';
 let envelopeImgVersion = 0; // cache-busts the preview <img> after upload/remove
 
-async function handleEnvelopeImageSelect(file) {
+async function handleEnvelopeImageSelect(slot, file, onDone) {
   try {
     const blob = await compressImage(file);
-    const res = await fetch(`/.netlify/functions/invite-photo?slot=${ENVELOPE_IMAGE_SLOT}`, {
+    const res = await fetch(`/.netlify/functions/invite-photo?slot=${slot}`, {
       method: 'POST',
       headers: { 'content-type': 'image/jpeg', 'x-plan-passcode': getPasscode() },
       body: blob,
     });
     if (!res.ok) throw new Error('upload failed: ' + res.status);
     envelopeImgVersion++;
-    renderInviteManager();
+    onDone();
   } catch (e) {
     console.error(e);
     alert('봉투 이미지 업로드에 실패했습니다. 비밀번호가 올바른지 확인해주세요.');
   }
 }
 
-function handleEnvelopeImageRemove() {
+function handleEnvelopeImageRemove(slot, onDone) {
   if (!confirm('봉투 이미지를 삭제할까요? 삭제하면 기본 디자인으로 표시됩니다.')) return;
-  fetch(`/.netlify/functions/invite-photo?slot=${ENVELOPE_IMAGE_SLOT}`, {
+  fetch(`/.netlify/functions/invite-photo?slot=${slot}`, {
     method: 'DELETE', headers: { 'x-plan-passcode': getPasscode() },
   }).catch(() => {});
   envelopeImgVersion++;
-  renderInviteManager();
+  onDone();
 }
 
-function renderEnvelopeImageBlock() {
+function renderEnvelopeImageBlock(slot, labelText, onDone) {
   const img = el('img', {
     class: 'envelope-img-preview',
-    src: `/.netlify/functions/invite-photo?slot=${ENVELOPE_IMAGE_SLOT}&v=${envelopeImgVersion}`,
+    src: `/.netlify/functions/invite-photo?slot=${slot}&v=${envelopeImgVersion}`,
     alt: '',
   });
   const placeholder = el('div', { class: 'envelope-img-placeholder' }, '아직 업로드된 봉투 이미지가 없습니다');
   placeholder.style.display = 'none';
-  const removeBtn = el('button', { class: 'btn small ghost', onclick: handleEnvelopeImageRemove }, '이미지 삭제');
+  const removeBtn = el('button', { class: 'btn small ghost', onclick: () => handleEnvelopeImageRemove(slot, onDone) }, '이미지 삭제');
   removeBtn.style.display = 'none';
   img.onerror = () => { img.style.display = 'none'; placeholder.style.display = ''; removeBtn.style.display = 'none'; };
   img.onload = () => { placeholder.style.display = 'none'; removeBtn.style.display = ''; };
 
   const fileInput = el('input', {
     type: 'file', accept: 'image/*', style: 'display:none',
-    onchange: e => { if (e.target.files[0]) handleEnvelopeImageSelect(e.target.files[0]); e.target.value = ''; },
+    onchange: e => { if (e.target.files[0]) handleEnvelopeImageSelect(slot, e.target.files[0], onDone); e.target.value = ''; },
   });
 
   return el('div', { class: 'envelope-img-field' }, [
-    el('label', { class: 'envelope-msg-label' }, '봉투 디자인 이미지 (선택 — 업로드하면 청첩장/상견례 첫 화면에 함께 쓰여요)'),
+    el('label', { class: 'envelope-msg-label' }, labelText),
     el('div', { class: 'envelope-img-preview-wrap' }, [img, placeholder]),
     el('div', { class: 'envelope-img-btn-row' }, [
       el('button', { class: 'btn small', onclick: () => fileInput.click() }, '이미지 업로드/교체'),
@@ -1293,15 +1295,11 @@ function renderInviteManager() {
   }, l.label));
   main.append(el('div', { class: 'layout-chip-row' }, chips));
 
-  main.append(el('div', { class: 'envelope-msg-field' }, [
-    el('label', { class: 'envelope-msg-label' }, '봉투 인사말 (선택 — 비워두면 이름 기반 자동 문구)'),
-    el('textarea', {
-      rows: '2', placeholder: '예) 희범과 소진의 결혼식에\n소중한 분들을 초대합니다.',
-      oninput: e => { inviteState.envelopeMessage = e.target.value; scheduleInviteSync(); },
-    }, inviteState.envelopeMessage || ''),
-  ]));
-
-  main.append(renderEnvelopeImageBlock());
+  main.append(renderEnvelopeImageBlock(
+    INVITE_ENVELOPE_IMAGE_SLOT,
+    '봉투 디자인 이미지 (선택 — 업로드하면 청첩장 첫 화면에 쓰여요. 터치하면 바로 청첩장으로 넘어갑니다)',
+    renderInviteManager,
+  ));
 
   const colorFields = InviteRenderSafe.COLOR_FIELDS.map(({ field, label, varName }) => el('label', { class: 'color-field' }, [
     el('input', {
@@ -1352,6 +1350,12 @@ function renderSgManager() {
     el('div', { class: 'kicker' }, '상견례 관리'),
     el('div', { class: 'invite-manager-title' }, '첫 인사 문구와 사진을 준비하세요'),
   ]));
+
+  main.append(renderEnvelopeImageBlock(
+    SG_ENVELOPE_IMAGE_SLOT,
+    '봉투 디자인 이미지 (선택 — 업로드하면 상견례 첫 화면에 쓰여요. 터치하면 바로 상견례 자료로 넘어갑니다)',
+    renderSgManager,
+  ));
 
   main.append(el('section', { class: 'block' }, [
     el('div', { class: 'block-head' }, [el('h2', {}, '첫 인사 문구')]),

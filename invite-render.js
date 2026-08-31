@@ -257,44 +257,6 @@ window.InviteRender = (function () {
     return img;
   }
 
-  // Full-screen viewer, used only by the map "크게보기" button (couple
-  // photos are static now — no tap-to-zoom). Reuses a single overlay
-  // instance appended to <body>.
-  function openLightbox(photos, startIndex) {
-    if (!photos || !photos.length) return;
-    let idx = startIndex;
-    const img = h('img', { class: 'ir-lightbox-img' });
-    const counter = h('div', { class: 'ir-lightbox-counter' });
-    function show() {
-      img.src = photoUrl(photos[idx]);
-      counter.textContent = `${idx + 1} / ${photos.length}`;
-    }
-    function go(delta) { idx = (idx + delta + photos.length) % photos.length; show(); }
-    function onKey(e) {
-      if (e.key === 'Escape') close();
-      else if (e.key === 'ArrowLeft') go(-1);
-      else if (e.key === 'ArrowRight') go(1);
-    }
-    function close() {
-      overlay.remove();
-      document.removeEventListener('keydown', onKey);
-    }
-    const overlay = h('div', { class: 'ir-lightbox', onclick: close }, [
-      h('button', { class: 'ir-lightbox-close', onclick: close }, '✕'),
-      img,
-    ]);
-    img.addEventListener('click', e => e.stopPropagation());
-    if (photos.length > 1) {
-      overlay.append(
-        h('button', { class: 'ir-lightbox-nav ir-lightbox-prev', onclick: e => { e.stopPropagation(); go(-1); } }, '‹'),
-        h('button', { class: 'ir-lightbox-nav ir-lightbox-next', onclick: e => { e.stopPropagation(); go(1); } }, '›'),
-        counter,
-      );
-    }
-    show();
-    document.addEventListener('keydown', onKey);
-    document.body.appendChild(overlay);
-  }
 
   // A photo slot: plain static image (no tap-to-zoom), or (when editable)
   // a click-to-replace tile with a remove button.
@@ -337,16 +299,13 @@ window.InviteRender = (function () {
   }
 
   // A single named image slot (used for the "약도 이미지" map screenshot) —
-  // distinct from the `photos` gallery array. Guests get a "지도 이미지 보기"
-  // button that opens it in the lightbox; the admin gets an upload/replace tile.
-  function singleImageSlot(data, opts, field, viewLabel) {
+  // distinct from the `photos` gallery array. Guests just see the image
+  // inline (no click needed); the admin gets an upload/replace tile.
+  function singleImageSlot(data, opts, field) {
     const slot = data[field];
     const editable = opts && opts.editable;
     if (!editable) {
-      if (!slot) return null;
-      const btn = h('button', { class: 'map-btn', type: 'button' }, viewLabel);
-      btn.addEventListener('click', () => openLightbox([slot], 0));
-      return btn;
+      return photoNode(slot, 'ir-map-image');
     }
     const wrap = h('div', { class: 'ir-photo-wrap ed-map-image-slot' + (slot ? '' : ' ir-photo-empty') });
     if (slot) wrap.append(photoNode(slot, 'ir-photo-img'));
@@ -453,11 +412,21 @@ window.InviteRender = (function () {
         phoneRow(data, opts),
         hallField,
         addressField,
-        singleImageSlot(data, opts, 'mapImageSlot', '지도 이미지 보기'),
-        h('div', { class: 'map-links' }, [
-          h('a', { class: 'map-btn', href: `tmap://search?name=${q}`, rel: 'noopener' }, '티맵'),
-          h('a', { class: 'map-btn', 'data-map': 'kakao', href: `https://map.kakao.com/link/search/${q}`, target: '_blank', rel: 'noopener' }, '카카오내비'),
-          h('a', { class: 'map-btn', 'data-map': 'naver', href: `https://map.naver.com/p/search/${q}`, target: '_blank', rel: 'noopener' }, '네이버지도'),
+        singleImageSlot(data, opts, 'mapImageSlot'),
+        h('div', { class: 'nav-block' }, [
+          h('div', { class: 'nav-title' }, '내비게이션'),
+          h('div', { class: 'nav-subtitle' }, '원하시는 앱을 선택하시면 길안내가 시작됩니다.'),
+          h('div', { class: 'nav-btn-row' }, [
+            h('a', { class: 'nav-btn', 'data-map': 'naver', href: `https://map.naver.com/p/search/${q}`, target: '_blank', rel: 'noopener' }, [
+              h('span', { class: 'nav-icon nav-icon-naver' }, 'N'), '네이버지도',
+            ]),
+            h('a', { class: 'nav-btn', href: `tmap://search?name=${q}`, rel: 'noopener' }, [
+              h('span', { class: 'nav-icon nav-icon-tmap' }, 'T'), '티맵',
+            ]),
+            h('a', { class: 'nav-btn', 'data-map': 'kakao', href: `https://map.kakao.com/link/search/${q}`, target: '_blank', rel: 'noopener' }, [
+              h('span', { class: 'nav-icon nav-icon-kakao' }, 'K'), '카카오내비',
+            ]),
+          ]),
         ]),
         transitSection(data, opts, 'subwayInfo', '지하철 Subway',
           '예) · 5호선 발산역 3번 출구 도보 5분\n· 9호선 양천향교역 6번 출구 도보 10분'),
@@ -876,35 +845,18 @@ window.InviteRender = (function () {
     const fallbackIcon = h('div', { class: 'ir-env-cover-fallback' }, [candleIcon()]);
     cover.addEventListener('error', () => { cover.style.display = 'none'; });
 
-    const autoMsg = `${withGwaWa(data.groom)} ${data.bride || ''}의 결혼식에\n소중한 분들을 초대합니다.`;
-    const msgText = (data.envelopeMessage && data.envelopeMessage.trim()) ? data.envelopeMessage : autoMsg;
-    const greeting = h('div', { class: 'ir-env-greeting' }, [
-      h('div', { class: 'ir-env-kicker' }, 'Wedding Invitation'),
-      h('div', { class: 'ir-env-msg' }, msgText),
-      h('div', { class: 'ir-env-date' }, formatDateCompact(data)),
-      h('div', { class: 'ir-env-chevron' }, '⌃'),
-    ]);
-
-    box.append(fallbackIcon, cover, greeting);
+    box.append(fallbackIcon, cover);
     const hint = h('div', { class: 'ir-env-hint' }, '터치하면 열립니다 ✨');
     const wrap = h('div', { class: 'ir-env-wrap' }, [box, hint]);
     persp.append(wrap);
 
-    let stage = 1;
-    const advance = () => {
-      if (stage === 1) {
-        // Cover image fades/scales away, the greeting card fades/scales in.
-        stage = 2;
-        wrap.classList.add('ir-env-stage-2');
-      } else if (stage === 2) {
-        // The whole envelope rises away, revealing the invitation underneath.
-        stage = 3;
-        persp.classList.add('ir-env-opening');
-        document.body.style.overflow = '';
-        setTimeout(() => persp.remove(), 900);
-      }
-    };
-    persp.addEventListener('click', advance);
+    // A single tap rises the whole envelope away, revealing the invitation
+    // already rendered underneath — no intermediate greeting screen.
+    persp.addEventListener('click', () => {
+      persp.classList.add('ir-env-opening');
+      document.body.style.overflow = '';
+      setTimeout(() => persp.remove(), 900);
+    });
     document.body.style.overflow = 'hidden';
     return persp;
   }
@@ -982,6 +934,29 @@ window.InviteRender = (function () {
   font-size: 0.85rem; font-weight: 700; color: var(--ir-text); text-decoration: none;
 }
 .ir-root .map-btn:hover { border-color: var(--ir-accent); color: var(--ir-accent); }
+
+.ir-root .ir-map-image {
+  width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--ir-radius);
+  display: block; margin-bottom: 14px;
+}
+.ir-root .nav-block { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--ir-border); text-align: left; }
+.ir-root .nav-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
+.ir-root .nav-subtitle { font-size: 0.8rem; color: var(--ir-muted); margin-bottom: 14px; }
+.ir-root .nav-btn-row { display: flex; gap: 8px; }
+.ir-root .nav-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 12px 4px; border: 1px solid var(--ir-border); border-radius: 12px;
+  text-decoration: none; color: var(--ir-text); font-size: 0.76rem; font-weight: 600;
+  background: var(--ir-panel);
+}
+.ir-root .nav-btn:hover { border-color: var(--ir-accent); }
+.ir-root .nav-icon {
+  width: 26px; height: 26px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 0.78rem; font-weight: 800;
+}
+.ir-root .nav-icon-naver { background: #03c75a; }
+.ir-root .nav-icon-tmap { background: #1b90f5; }
+.ir-root .nav-icon-kakao { background: #fee500; color: #391b1b; }
 
 .ir-root .account-note {
   background: var(--ir-panel); border: 1px dashed var(--ir-border); border-radius: var(--ir-radius);
@@ -1070,34 +1045,10 @@ window.InviteRender = (function () {
 .ir-root .polaroid-item .ir-photo-add, .ir-root .polaroid-item .ir-photo-wrap { aspect-ratio: 1; }
 .ir-root .classic-photo .ir-photo-add { border-radius: 50%; }
 
-/* lightbox (appended to <body>, outside .ir-root — kept under its own
-   distinctive ir-lightbox-* names so it can't collide with host page CSS) */
-.ir-lightbox {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 1000;
-  display: flex; align-items: center; justify-content: center; padding: 20px; cursor: zoom-out;
-}
-.ir-lightbox-img { max-width: 100%; max-height: 100%; object-fit: contain; cursor: default; border-radius: 4px; }
-.ir-lightbox-close {
-  position: absolute; top: 16px; right: 16px; width: 40px; height: 40px; border-radius: 50%;
-  background: rgba(255,255,255,0.15); color: #fff; border: none; font-size: 1.1rem; cursor: pointer;
-}
-.ir-lightbox-close:hover { background: rgba(255,255,255,0.28); }
-.ir-lightbox-nav {
-  position: absolute; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; border-radius: 50%;
-  background: rgba(255,255,255,0.15); color: #fff; border: none; font-size: 1.6rem; cursor: pointer; line-height: 1;
-}
-.ir-lightbox-nav:hover { background: rgba(255,255,255,0.28); }
-.ir-lightbox-prev { left: 16px; }
-.ir-lightbox-next { right: 16px; }
-.ir-lightbox-counter {
-  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-  color: rgba(255,255,255,0.85); font-size: 0.82rem; font-weight: 600; letter-spacing: 0.04em;
-}
-
 /* envelope intro: an uploaded envelope photo (falls back to a plain paper
-   card if none was uploaded). Tap once: the cover image fades/scales away
-   and a greeting card fades/scales in over it. Tap again: the whole thing
-   rises away to reveal the invitation underneath. */
+   card with an icon if none was uploaded). A single tap rises the whole
+   thing away, revealing the invitation underneath — no intermediate
+   greeting screen. */
 .ir-envelope-perspective {
   position: fixed; inset: 0; z-index: 500;
   display: flex; align-items: center; justify-content: center; padding: 26px;
@@ -1118,36 +1069,14 @@ window.InviteRender = (function () {
 }
 .ir-env-cover-img {
   position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; object-fit: cover;
-  transition: opacity .6s ease, transform .8s cubic-bezier(.4,0,.2,1);
 }
-.ir-env-wrap.ir-env-stage-2 .ir-env-cover-img {
-  opacity: 0; transform: scale(0.92) translateY(-16px); pointer-events: none;
-}
-
-.ir-env-greeting {
-  position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 20px;
-  background: var(--ir-panel, #ffffff); opacity: 0; transform: translateY(16px) scale(0.95);
-  transition: opacity .8s cubic-bezier(.34,1.56,.64,1), transform .8s cubic-bezier(.34,1.56,.64,1);
-}
-.ir-env-wrap.ir-env-stage-2 .ir-env-greeting { opacity: 1; transform: translateY(0) scale(1); }
+.ir-env-icon-svg { width: 26px; height: 26px; color: var(--ir-muted); }
 
 .ir-env-hint {
   margin-top: 18px; font-size: 0.82rem; color: var(--ir-muted); letter-spacing: -0.2px;
-  transition: opacity .3s ease; animation: ir-env-pulse 1.8s infinite;
+  animation: ir-env-pulse 1.8s infinite;
 }
-.ir-env-wrap.ir-env-stage-2 .ir-env-hint { opacity: 0; animation: none; }
 @keyframes ir-env-pulse { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
-
-.ir-env-icon-svg { width: 26px; height: 26px; color: var(--ir-muted); }
-.ir-env-kicker { font-size: 0.68rem; letter-spacing: 0.22em; color: var(--ir-muted); }
-.ir-env-msg {
-  font-family: var(--ir-font-head); font-size: 1.05rem; line-height: 1.7; color: var(--ir-text);
-  white-space: pre-line; margin: 6px 0;
-}
-.ir-env-date { font-size: 0.82rem; letter-spacing: 0.1em; color: var(--ir-muted); margin-bottom: 4px; }
-.ir-env-chevron { font-size: 1.1rem; color: var(--ir-accent); animation: ir-env-bounce 1.6s ease-in-out infinite; }
-@keyframes ir-env-bounce { 0%, 100% { transform: translateY(0); opacity: .6; } 50% { transform: translateY(-6px); opacity: 1; } }
 
 /* editorial theme */
 .ir-root[data-layout="editorial"] {

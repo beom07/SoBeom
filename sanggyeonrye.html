@@ -51,11 +51,10 @@
     background: rgba(0,0,0,0.45); color: #fff; font-size: 0.75rem; padding: 4px 12px; border-radius: 999px;
   }
 
-  /* envelope intro: an uploaded envelope photo (falls back to a plain paper
-     card if none was uploaded — same shared image as /invite). Tap once:
-     the cover image fades/scales away and a greeting card fades/scales in
-     over it. Tap again: the whole thing rises away, revealing the page
-     underneath. */
+  /* envelope intro: an uploaded envelope photo (falls back to a plain card
+     with an icon if none was uploaded — a separate image from /invite's).
+     A single tap rises the whole thing away, revealing the page underneath
+     — no intermediate greeting screen. */
   .sg-envelope-perspective {
     position: fixed; inset: 0; z-index: 500;
     display: flex; align-items: center; justify-content: center; padding: 26px;
@@ -76,35 +75,14 @@
   }
   .sg-env-cover-img {
     position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; object-fit: cover;
-    transition: opacity .6s ease, transform .8s cubic-bezier(.4,0,.2,1);
   }
-  .sg-env-wrap.sg-env-stage-2 .sg-env-cover-img {
-    opacity: 0; transform: scale(0.92) translateY(-16px); pointer-events: none;
-  }
-
-  .sg-env-greeting {
-    position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 20px;
-    background: var(--sg-panel); opacity: 0; transform: translateY(16px) scale(0.95);
-    transition: opacity .8s cubic-bezier(.34,1.56,.64,1), transform .8s cubic-bezier(.34,1.56,.64,1);
-  }
-  .sg-env-wrap.sg-env-stage-2 .sg-env-greeting { opacity: 1; transform: translateY(0) scale(1); }
+  .sg-env-icon-svg { width: 26px; height: 26px; color: var(--sg-muted); }
 
   .sg-env-hint {
     margin-top: 18px; font-size: 0.82rem; color: var(--sg-muted); letter-spacing: -0.2px;
-    transition: opacity .3s ease; animation: sg-env-pulse 1.8s infinite;
+    animation: sg-env-pulse 1.8s infinite;
   }
-  .sg-env-wrap.sg-env-stage-2 .sg-env-hint { opacity: 0; animation: none; }
   @keyframes sg-env-pulse { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
-
-  .sg-env-icon-svg { width: 26px; height: 26px; color: var(--sg-muted); }
-  .sg-env-kicker { font-size: 0.68rem; letter-spacing: 0.22em; color: var(--sg-muted); }
-  .sg-env-msg {
-    font-family: var(--sg-font); font-size: 1.05rem; line-height: 1.7; color: var(--sg-text);
-    white-space: pre-line; margin: 6px 0;
-  }
-  .sg-env-chevron { font-size: 1.1rem; color: var(--sg-accent); animation: sg-env-bounce 1.6s ease-in-out infinite; }
-  @keyframes sg-env-bounce { 0%, 100% { transform: translateY(0); opacity: .6; } 50% { transform: translateY(-6px); opacity: 1; } }
 </style>
 </head>
 <body>
@@ -182,70 +160,45 @@ function envelopeIcon() {
   return svg;
 }
 
-// A single well-known photo slot, uploaded once from the invite manager
-// (청첩장 관리) and shared by both /invite and /meeting — its mere existence
-// is the source of truth (no data-blob field needed). Falls back to a
-// plain card with an icon if nothing has been uploaded yet.
-const ENVELOPE_IMAGE_SLOT = 'envelope-cover';
+// A single well-known photo slot, uploaded from 상견례 관리 (separate from
+// the 청첩장 envelope image — different occasion, different photo). Its
+// mere existence is the source of truth (no data-blob field needed). Falls
+// back to a plain card with an icon if nothing has been uploaded yet.
+const ENVELOPE_IMAGE_SLOT = 'envelope-cover-sg';
 
 // Guest view only, once per page load: an uploaded envelope photo (falls
-// back to a plain card if none was uploaded). Tap once: the cover image
-// fades/scales away and a greeting card (matches the invitation envelope's
-// stage-2) fades/scales in over it. Tap again: the whole thing rises away,
-// revealing the intro text + slideshow already rendered underneath.
-function showEnvelope(data) {
+// back to a plain card if none was uploaded). A single tap rises the whole
+// thing away, revealing the intro text + slideshow already rendered
+// underneath — no intermediate greeting screen. Shown immediately, not
+// waiting on the data fetch, since it no longer needs the real intro text.
+function showEnvelope() {
   const persp = el('div', { class: 'sg-envelope-perspective' });
   const box = el('div', { class: 'sg-env-box' });
   const cover = el('img', { class: 'sg-env-cover-img', src: photoUrl(ENVELOPE_IMAGE_SLOT), alt: '' });
   const fallbackIcon = el('div', { class: 'sg-env-cover-fallback' }, [envelopeIcon()]);
   cover.addEventListener('error', () => { cover.style.display = 'none'; });
 
-  const msgText = (data && data.introText && data.introText.trim())
-    ? data.introText
-    : '상견례 자리에\n함께해 주셔서 감사합니다.';
-  const greeting = el('div', { class: 'sg-env-greeting' }, [
-    el('div', { class: 'sg-env-kicker' }, 'Family Meeting'),
-    el('div', { class: 'sg-env-msg' }, msgText),
-    el('div', { class: 'sg-env-chevron' }, '⌃'),
-  ]);
-
-  box.append(fallbackIcon, cover, greeting);
+  box.append(fallbackIcon, cover);
   const hint = el('div', { class: 'sg-env-hint' }, '터치하면 열립니다 ✨');
   const wrap = el('div', { class: 'sg-env-wrap' }, [box, hint]);
   persp.append(wrap);
 
-  let stage = 1;
   persp.addEventListener('click', () => {
-    if (stage === 1) {
-      // Cover image fades/scales away, the greeting card fades/scales in.
-      stage = 2;
-      wrap.classList.add('sg-env-stage-2');
-    } else if (stage === 2) {
-      // The whole envelope rises away, revealing the page underneath.
-      stage = 3;
-      persp.classList.add('sg-env-opening');
-      document.body.style.overflow = '';
-      setTimeout(() => persp.remove(), 900);
-    }
+    persp.classList.add('sg-env-opening');
+    document.body.style.overflow = '';
+    setTimeout(() => persp.remove(), 900);
   });
   document.body.style.overflow = 'hidden';
   document.body.appendChild(persp);
 }
 
-async function boot() {
-  let data = { introText: '', slides: [] };
-  try {
-    const res = await fetch('/.netlify/functions/sanggyeonrye');
-    if (res.ok) {
-      const json = await res.json();
-      if (json && json.data) data = json.data;
-    }
-  } catch {}
-  render(data);
-  showEnvelope(data);
-}
+render({ introText: '', slides: [] });
+showEnvelope();
 
-boot();
+fetch('/.netlify/functions/sanggyeonrye')
+  .then(res => res.ok ? res.json() : null)
+  .then(json => { if (json && json.data) render(json.data); })
+  .catch(() => {});
 </script>
 </body>
 </html>
