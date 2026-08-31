@@ -293,6 +293,25 @@
   }
   .invite-open-link { display: block; width: fit-content; margin: 0 auto 30px; }
 
+  /* 상견례 manager */
+  .sg-intro-textarea, .sg-slide-textarea {
+    width: 100%; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 12px; font-family: var(--font-body); font-size: 0.9rem; color: var(--text); resize: vertical;
+  }
+  .sg-intro-textarea:focus, .sg-slide-textarea:focus { border-color: var(--accent); outline: none; }
+  .sg-slide-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+  .sg-slide-row {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px;
+  }
+  .sg-slide-thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+  .sg-slide-label { color: var(--muted); font-size: 0.85rem; flex: 1; }
+  .sg-slide-row .sg-slide-textarea { flex: 1; }
+  .sg-slide-controls { display: flex; gap: 6px; flex-shrink: 0; }
+  .icon-btn.small { width: 28px; height: 28px; }
+  .icon-btn.small[disabled] { opacity: 0.35; cursor: default; }
+  .sg-slide-tools { display: flex; gap: 10px; }
+
   @media (max-width: 720px) {
     .shell { padding: 0 14px; }
     .brand-mark { font-size: 1.1rem; }
@@ -421,7 +440,7 @@ function save(data) {
 }
 
 let state = ensureFixedPlans(loadLocalCache());
-let uiView = 'plan'; // 'plan' | 'invite-manager'
+let uiView = 'plan'; // 'plan' | 'invite-manager' | 'sg-manager'
 
 /* ---------- Server sync (Netlify Function + Blobs) ---------- */
 const API_URL = '/.netlify/functions/plans';
@@ -582,6 +601,90 @@ function handleMapImageRemove() {
       method: 'DELETE', headers: { 'x-plan-passcode': getPasscode() },
     }).catch(() => {});
   }
+}
+
+/* ---------- 상견례 editor (separate data + endpoint, reuses invite-photo store) ---------- */
+const sgPhotoUrl = slot => `/.netlify/functions/invite-photo?slot=${encodeURIComponent(slot)}`;
+let sgState = { introText: '', slides: [] };
+let sgLoaded = false;
+let sgSyncTimer = null;
+
+async function loadSgData() {
+  try {
+    const res = await fetch('/.netlify/functions/sanggyeonrye');
+    if (res.ok) {
+      const json = await res.json();
+      if (json.data) sgState = { introText: '', slides: [], ...json.data };
+    }
+  } catch (e) { console.error(e); }
+  sgLoaded = true;
+  if (uiView === 'sg-manager') renderSgManager();
+}
+
+function scheduleSgSync() {
+  clearTimeout(sgSyncTimer);
+  sgSyncTimer = setTimeout(() => {
+    fetch('/.netlify/functions/sanggyeonrye', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-plan-passcode': getPasscode() },
+      body: JSON.stringify(sgState),
+    }).catch(e => console.error(e));
+  }, 700);
+}
+
+function updateSgIntro(v) { sgState.introText = v; scheduleSgSync(); }
+
+async function addSgPhotoSlide(file) {
+  try {
+    const blob = await compressImage(file);
+    const slot = uid();
+    const res = await fetch(`/.netlify/functions/invite-photo?slot=${slot}`, {
+      method: 'POST',
+      headers: { 'content-type': 'image/jpeg', 'x-plan-passcode': getPasscode() },
+      body: blob,
+    });
+    if (!res.ok) throw new Error('upload failed: ' + res.status);
+    sgState.slides.push({ id: uid(), type: 'photo', slot });
+    scheduleSgSync();
+    renderSgManager();
+  } catch (e) {
+    console.error(e);
+    alert('사진 업로드에 실패했습니다. 비밀번호가 올바른지 확인해주세요.');
+  }
+}
+
+function addSgTextSlide() {
+  sgState.slides.push({ id: uid(), type: 'text', text: '' });
+  scheduleSgSync();
+  renderSgManager();
+}
+
+function updateSgSlideText(id, v) {
+  const slide = sgState.slides.find(s => s.id === id);
+  if (slide) { slide.text = v; scheduleSgSync(); }
+}
+
+function removeSgSlide(id) {
+  const slide = sgState.slides.find(s => s.id === id);
+  sgState.slides = sgState.slides.filter(s => s.id !== id);
+  scheduleSgSync();
+  renderSgManager();
+  if (slide && slide.type === 'photo' && slide.slot) {
+    fetch(`/.netlify/functions/invite-photo?slot=${slide.slot}`, {
+      method: 'DELETE', headers: { 'x-plan-passcode': getPasscode() },
+    }).catch(() => {});
+  }
+}
+
+function moveSgSlide(id, dir) {
+  const idx = sgState.slides.findIndex(s => s.id === id);
+  if (idx === -1) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= sgState.slides.length) return;
+  const [item] = sgState.slides.splice(idx, 1);
+  sgState.slides.splice(newIdx, 0, item);
+  scheduleSgSync();
+  renderSgManager();
 }
 
 function setSyncStatus(kind, text) {
@@ -868,6 +971,13 @@ function renderTabs() {
   nav.append(el('a', {
     class: 'tab tab-link', href: '/invite', target: '_blank', rel: 'noopener',
   }, '청첩장 보기 ↗'));
+  nav.append(el('button', {
+    class: 'tab' + (uiView === 'sg-manager' ? ' active' : ''),
+    onclick: () => { uiView = 'sg-manager'; render(); },
+  }, '상견례 관리'));
+  nav.append(el('a', {
+    class: 'tab tab-link', href: '/meeting', target: '_blank', rel: 'noopener',
+  }, '상견례 자료 보기 ↗'));
 }
 
 function calcPlan(plan) {
@@ -1144,9 +1254,81 @@ function renderInviteManager() {
     '이름·문구·사진을 클릭해서 바로 수정하세요. 변경 사항은 자동으로 저장되어 하객이 보는 화면에도 바로 반영됩니다.'));
 }
 
+function renderSgManager() {
+  const main = document.getElementById('main');
+  main.innerHTML = '';
+
+  if (!sgLoaded) {
+    main.append(el('div', { class: 'empty' }, '불러오는 중...'));
+    return;
+  }
+
+  main.append(el('div', { class: 'plan-header' }, [
+    el('div', { class: 'kicker' }, '상견례 관리'),
+    el('div', { class: 'invite-manager-title' }, '첫 인사 문구와 사진을 준비하세요'),
+  ]));
+
+  main.append(el('section', { class: 'block' }, [
+    el('div', { class: 'block-head' }, [el('h2', {}, '첫 인사 문구')]),
+    el('textarea', {
+      class: 'sg-intro-textarea', rows: '4',
+      placeholder: '상견례 자료 첫 화면에 보일 인사 문구를 입력하세요.',
+      oninput: e => updateSgIntro(e.target.value),
+    }, sgState.introText || ''),
+  ]));
+
+  const slideRows = sgState.slides.map((slide, i) => {
+    const controls = el('div', { class: 'sg-slide-controls' }, [
+      el('button', { class: 'icon-btn small', title: '위로', disabled: i === 0 ? '' : null, onclick: () => moveSgSlide(slide.id, -1) }, '↑'),
+      el('button', { class: 'icon-btn small', title: '아래로', disabled: i === sgState.slides.length - 1 ? '' : null, onclick: () => moveSgSlide(slide.id, 1) }, '↓'),
+      el('button', { class: 'icon-btn small', title: '삭제', onclick: () => removeSgSlide(slide.id) }, '✕'),
+    ]);
+    if (slide.type === 'photo') {
+      return el('div', { class: 'sg-slide-row' }, [
+        el('img', { class: 'sg-slide-thumb', src: sgPhotoUrl(slide.slot), alt: '' }),
+        el('div', { class: 'sg-slide-label' }, `사진 ${i + 1}`),
+        controls,
+      ]);
+    }
+    return el('div', { class: 'sg-slide-row' }, [
+      el('textarea', {
+        class: 'sg-slide-textarea', rows: '2', placeholder: '슬라이드에 넣을 텍스트 (선택)',
+        oninput: e => updateSgSlideText(slide.id, e.target.value),
+      }, slide.text || ''),
+      controls,
+    ]);
+  });
+
+  const addPhotoInput = el('input', {
+    type: 'file', accept: 'image/*', style: 'display:none',
+    onchange: e => { if (e.target.files[0]) addSgPhotoSlide(e.target.files[0]); e.target.value = ''; },
+  });
+
+  main.append(el('section', { class: 'block' }, [
+    el('div', { class: 'block-head' }, [
+      el('h2', {}, '슬라이드 구성'),
+    ]),
+    el('div', { class: 'sg-slide-list' },
+      slideRows.length ? slideRows : [el('div', { class: 'empty' }, '아직 추가한 사진/텍스트가 없습니다.')]),
+    el('div', { class: 'sg-slide-tools' }, [
+      el('button', { class: 'btn small', onclick: () => addPhotoInput.click() }, '+ 사진 추가'),
+      el('button', { class: 'btn small ghost', onclick: addSgTextSlide }, '+ 텍스트 추가'),
+      addPhotoInput,
+    ]),
+  ]));
+
+  main.append(el('a', {
+    class: 'btn small invite-open-link', href: '/meeting', target: '_blank', rel: 'noopener',
+  }, '새 탭에서 실제 링크로 열기 ↗'));
+
+  main.append(el('footer', { class: 'note' },
+    '사진은 왼쪽/오른쪽으로 넘기는 슬라이드 형태로 보여집니다. 순서는 화살표로 조정할 수 있어요. 변경 사항은 자동으로 저장됩니다.'));
+}
+
 function render() {
   renderTabs();
   if (uiView === 'invite-manager') renderInviteManager();
+  else if (uiView === 'sg-manager') renderSgManager();
   else renderMain();
 }
 
@@ -1161,6 +1343,7 @@ document.getElementById('resetPasscodeBtn').addEventListener('click', resetPassc
 render();
 trySync();
 loadInviteData();
+loadSgData();
 </script>
 </body>
 </html>

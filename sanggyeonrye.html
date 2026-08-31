@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>상견례 자료</title>
+<meta name="description" content="상견례 자료입니다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sg-paper: #fffdfa; --sg-panel: #ffffff; --sg-panel-2: #fbeee1; --sg-border: #ecdfce;
+    --sg-text: #4a3f33; --sg-muted: #a5967e; --sg-accent: #e0795c;
+    --sg-font: 'Nanum Myeongjo', serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--sg-paper); color: var(--sg-text);
+    font-family: var(--sg-font); display: flex; justify-content: center;
+  }
+  .card { width: 100%; max-width: 460px; min-height: 100vh; padding-bottom: 50px; }
+  .head { text-align: center; padding: 40px 30px 10px; }
+  .kicker { font-size: 0.72rem; letter-spacing: 0.2em; color: var(--sg-muted); margin-bottom: 10px; }
+  .title { font-size: 1.4rem; font-weight: 700; }
+  .intro {
+    text-align: center; font-size: 0.98rem; line-height: 1.9; color: var(--sg-text);
+    white-space: pre-line; padding: 20px 30px 34px;
+  }
+  .empty { text-align: center; color: var(--sg-muted); padding: 60px 30px; font-size: 0.9rem; }
+
+  .slideshow { position: relative; width: 100%; aspect-ratio: 4/5; overflow: hidden; background: var(--sg-panel-2); }
+  .slide-track { display: flex; height: 100%; transition: transform .45s cubic-bezier(.4,0,.2,1); }
+  .slide { flex: 0 0 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
+  .slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .slide.text-slide { background: var(--sg-panel); padding: 40px; }
+  .slide.text-slide .slide-text {
+    font-size: 1.1rem; line-height: 2; text-align: center; white-space: pre-line; color: var(--sg-text);
+  }
+  .slide-nav {
+    position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,0.85); border: none; font-size: 1.4rem; cursor: pointer; color: var(--sg-text);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .slide-nav.prev { left: 12px; }
+  .slide-nav.next { right: 12px; }
+  .slide-nav[disabled] { opacity: 0.3; cursor: default; }
+  .slide-counter {
+    position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.45); color: #fff; font-size: 0.75rem; padding: 4px 12px; border-radius: 999px;
+  }
+  footer { text-align: center; color: var(--sg-muted); font-size: 0.78rem; padding: 30px 20px 0; }
+</style>
+</head>
+<body>
+<div class="card" id="app"></div>
+
+<script>
+function el(tag, attrs, children) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined) continue;
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  }
+  for (const c of [].concat(children || [])) if (c !== null && c !== undefined) e.append(c);
+  return e;
+}
+function photoUrl(slot) { return `/.netlify/functions/invite-photo?slot=${encodeURIComponent(slot)}`; }
+
+function renderSlideshow(slides) {
+  if (!slides || !slides.length) return null;
+  let idx = 0;
+  const track = el('div', { class: 'slide-track' }, slides.map(s => {
+    if (s.type === 'photo') {
+      const img = el('img', { src: photoUrl(s.slot), alt: '' });
+      img.onerror = () => { img.style.display = 'none'; };
+      return el('div', { class: 'slide' }, [img]);
+    }
+    return el('div', { class: 'slide text-slide' }, [el('div', { class: 'slide-text' }, s.text || '')]);
+  }));
+  const prevBtn = el('button', { class: 'slide-nav prev', type: 'button' }, '‹');
+  const nextBtn = el('button', { class: 'slide-nav next', type: 'button' }, '›');
+  const counter = el('div', { class: 'slide-counter' }, `1 / ${slides.length}`);
+
+  function update() {
+    track.style.transform = `translateX(-${idx * 100}%)`;
+    counter.textContent = `${idx + 1} / ${slides.length}`;
+    prevBtn.disabled = idx === 0;
+    nextBtn.disabled = idx === slides.length - 1;
+  }
+  prevBtn.addEventListener('click', () => { if (idx > 0) { idx--; update(); } });
+  nextBtn.addEventListener('click', () => { if (idx < slides.length - 1) { idx++; update(); } });
+  update();
+
+  const wrap = el('div', { class: 'slideshow' }, [track, prevBtn, nextBtn]);
+  if (slides.length > 1) wrap.append(counter);
+  return wrap;
+}
+
+function render(data) {
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  app.append(el('div', { class: 'head' }, [
+    el('div', { class: 'kicker' }, 'FAMILY MEETING'),
+    el('div', { class: 'title' }, '상견례 자료'),
+  ]));
+  if (data.introText && data.introText.trim()) {
+    app.append(el('div', { class: 'intro' }, data.introText));
+  }
+  const slideshow = renderSlideshow(data.slides);
+  if (slideshow) {
+    app.append(slideshow);
+  } else if (!data.introText) {
+    app.append(el('div', { class: 'empty' }, '아직 등록된 자료가 없습니다.'));
+  }
+  app.append(el('footer', {}, '소범 사이트'));
+}
+
+render({ introText: '', slides: [] });
+
+fetch('/.netlify/functions/sanggyeonrye')
+  .then(res => res.ok ? res.json() : null)
+  .then(json => { if (json && json.data) render(json.data); })
+  .catch(() => {});
+</script>
+</body>
+</html>

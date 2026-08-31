@@ -8,3 +8,8 @@
   from = "/invite"
   to = "/.netlify/functions/invite-page"
   status = 200
+
+[[redirects]]
+  from = "/meeting"
+  to = "/sanggyeonrye.html"
+  status = 200
