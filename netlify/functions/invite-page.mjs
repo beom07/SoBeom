@@ -43,9 +43,15 @@ export default async (req) => {
   // Prefer the uploaded envelope cover photo for link previews (KakaoTalk,
   // iMessage, etc.) since that's the couple's chosen representative image;
   // fall back to the first gallery photo if no envelope image was uploaded.
+  // The "-og" slot is a letterboxed (uncropped, full-photo) 1200x630
+  // variant made specifically for link previews, which crop to their own
+  // card aspect ratio — prefer it over the raw crop-friendly upload.
   const photoStore = getStore({ name: 'invite-photos', consistency: 'strong' });
-  const envelopeBytes = await photoStore.get('envelope-cover', { type: 'arrayBuffer' }).catch(() => null);
-  const imageSlot = envelopeBytes ? 'envelope-cover' : (data.photos && data.photos[0]);
+  const [envelopeOgBytes, envelopeBytes] = await Promise.all([
+    photoStore.get('envelope-cover-og', { type: 'arrayBuffer' }).catch(() => null),
+    photoStore.get('envelope-cover', { type: 'arrayBuffer' }).catch(() => null),
+  ]);
+  const imageSlot = envelopeOgBytes ? 'envelope-cover-og' : envelopeBytes ? 'envelope-cover' : (data.photos && data.photos[0]);
   const imageTag = imageSlot
     ? `<meta property="og:image" content="${origin}/.netlify/functions/invite-photo?slot=${encodeURIComponent(imageSlot)}">\n<meta name="twitter:card" content="summary_large_image">`
     : '';

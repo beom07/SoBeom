@@ -33,11 +33,17 @@ export default async (req) => {
 
   // Prefer the uploaded envelope cover photo for link previews (separate
   // from the invitation's own envelope image); fall back to the first
-  // photo slide if no envelope image was uploaded for 상견례.
+  // photo slide if no envelope image was uploaded for 상견례. The "-og"
+  // slot is a letterboxed (uncropped, full-photo) 1200x630 variant made
+  // specifically for link previews, which crop to their own card aspect
+  // ratio — prefer it over the raw crop-friendly upload.
   const photoStore = getStore({ name: 'invite-photos', consistency: 'strong' });
-  const envelopeBytes = await photoStore.get('envelope-cover-sg', { type: 'arrayBuffer' }).catch(() => null);
+  const [envelopeOgBytes, envelopeBytes] = await Promise.all([
+    photoStore.get('envelope-cover-sg-og', { type: 'arrayBuffer' }).catch(() => null),
+    photoStore.get('envelope-cover-sg', { type: 'arrayBuffer' }).catch(() => null),
+  ]);
   const firstSlidePhoto = (data.slides || []).find(s => s.type === 'photo');
-  const imageSlot = envelopeBytes ? 'envelope-cover-sg' : (firstSlidePhoto && firstSlidePhoto.slot);
+  const imageSlot = envelopeOgBytes ? 'envelope-cover-sg-og' : envelopeBytes ? 'envelope-cover-sg' : (firstSlidePhoto && firstSlidePhoto.slot);
   const imageTag = imageSlot
     ? `<meta property="og:image" content="${origin}/.netlify/functions/invite-photo?slot=${encodeURIComponent(imageSlot)}">\n<meta name="twitter:card" content="summary_large_image">`
     : '';

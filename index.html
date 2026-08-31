@@ -533,6 +533,26 @@ function compressImage(file, maxDim, quality) {
   });
 }
 
+// Link-preview (KakaoTalk/OG) images get cropped to the platform's card
+// aspect ratio — a tall envelope photo used as-is loses most of its edges
+// to a center-crop. This instead letterboxes the whole photo, uncropped,
+// onto a standard 1200x630 OG canvas with soft padding on the short sides.
+function compressImageLetterboxed(file, targetW, targetH, quality) {
+  targetW = targetW || 1200; targetH = targetH || 630; quality = quality || 0.85;
+  return createImageBitmap(file).then(bitmap => {
+    const scale = Math.min(targetW / bitmap.width, targetH / bitmap.height);
+    const w = Math.round(bitmap.width * scale), h = Math.round(bitmap.height * scale);
+    const x = Math.round((targetW - w) / 2), y = Math.round((targetH - h) / 2);
+    const canvas = document.createElement('canvas');
+    canvas.width = targetW; canvas.height = targetH;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#f3ede4';
+    ctx.fillRect(0, 0, targetW, targetH);
+    ctx.drawImage(bitmap, x, y, w, h);
+    return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
+  });
+}
+
 // index === -1 means "append a new photo"; otherwise replace the photo at that index.
 async function handleInvitePhotoSelect(index, file) {
   try {
@@ -628,13 +648,21 @@ let envelopeImgVersion = 0; // cache-busts the preview <img> after upload/remove
 
 async function handleEnvelopeImageSelect(slot, file, onDone) {
   try {
-    const blob = await compressImage(file);
+    const [cropBlob, ogBlob] = await Promise.all([compressImage(file), compressImageLetterboxed(file)]);
+    const passcode = getPasscode();
     const res = await fetch(`/.netlify/functions/invite-photo?slot=${slot}`, {
       method: 'POST',
-      headers: { 'content-type': 'image/jpeg', 'x-plan-passcode': getPasscode() },
-      body: blob,
+      headers: { 'content-type': 'image/jpeg', 'x-plan-passcode': passcode },
+      body: cropBlob,
     });
     if (!res.ok) throw new Error('upload failed: ' + res.status);
+    // Companion letterboxed version used only for link-preview og:image tags
+    // (the full photo, uncropped) — best-effort, not critical if it fails.
+    fetch(`/.netlify/functions/invite-photo?slot=${slot}-og`, {
+      method: 'POST',
+      headers: { 'content-type': 'image/jpeg', 'x-plan-passcode': passcode },
+      body: ogBlob,
+    }).catch(() => {});
     envelopeImgVersion++;
     onDone();
   } catch (e) {
@@ -645,8 +673,12 @@ async function handleEnvelopeImageSelect(slot, file, onDone) {
 
 function handleEnvelopeImageRemove(slot, onDone) {
   if (!confirm('봉투 이미지를 삭제할까요? 삭제하면 기본 디자인으로 표시됩니다.')) return;
+  const passcode = getPasscode();
   fetch(`/.netlify/functions/invite-photo?slot=${slot}`, {
-    method: 'DELETE', headers: { 'x-plan-passcode': getPasscode() },
+    method: 'DELETE', headers: { 'x-plan-passcode': passcode },
+  }).catch(() => {});
+  fetch(`/.netlify/functions/invite-photo?slot=${slot}-og`, {
+    method: 'DELETE', headers: { 'x-plan-passcode': passcode },
   }).catch(() => {});
   envelopeImgVersion++;
   onDone();

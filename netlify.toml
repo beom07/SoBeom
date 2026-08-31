@@ -4,10 +4,16 @@
 [functions]
   node_bundler = "esbuild"
 
+# force = true is required on every one of these: Netlify only applies a
+# redirect after checking whether the path already matches a real static
+# file, and since invite.html/sanggyeonrye.html actually exist, "/invite"
+# etc. would otherwise silently resolve straight to those files (with their
+# generic static <meta> tags) and never reach the SSR function at all.
 [[redirects]]
   from = "/invite"
   to = "/.netlify/functions/invite-page"
   status = 200
+  force = true
 
 # Catch the old direct-file link too, so a previously-shared/bookmarked
 # ".../invite.html" URL also gets the server-rendered version (correct
@@ -16,11 +22,13 @@
   from = "/invite.html"
   to = "/.netlify/functions/invite-page"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/meeting"
   to = "/.netlify/functions/meeting-page"
   status = 200
+  force = true
 
 # Catch the old direct-file link too, so a previously-shared/bookmarked
 # ".../sanggyeonrye.html" URL also gets the server-rendered version.
@@ -28,3 +36,4 @@
   from = "/sanggyeonrye.html"
   to = "/.netlify/functions/meeting-page"
   status = 200
+  force = true
