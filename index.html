@@ -304,7 +304,11 @@
     display: flex; align-items: center; gap: 12px;
     background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px;
   }
-  .sg-slide-thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+  .sg-slide-thumb {
+    width: 56px; height: 56px; object-fit: cover; border-radius: 8px; flex-shrink: 0;
+    pointer-events: none; touch-action: manipulation;
+    -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+  }
   .sg-slide-label { color: var(--muted); font-size: 0.85rem; flex: 1; }
   .sg-slide-row .sg-slide-textarea { flex: 1; }
   .sg-slide-controls { display: flex; gap: 6px; flex-shrink: 0; }
