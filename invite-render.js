@@ -486,6 +486,36 @@ window.InviteRender = (function () {
 
   const BUILDERS = { classic: buildClassic, cover: buildCover, gallery: buildGallery, polaroid: buildPolaroid, minimal: buildMinimal };
 
+  // Envelope-open intro (guest view only, once per page load) — tap to fold
+  // the flap open and reveal the invitation already rendered underneath.
+  let envelopeShown = false;
+  function buildEnvelopeOverlay(data) {
+    const overlay = h('div', { class: 'ir-envelope-overlay' });
+    const envelope = h('div', { class: 'ir-envelope' }, [
+      h('div', { class: 'ir-envelope-body' }, [
+        h('div', { class: 'ir-envelope-names' }, [
+          data.groom || '', h('span', { class: 'heart' }, '♥'), data.bride || '',
+        ]),
+        h('div', { class: 'ir-envelope-hint' }, '눌러서 초대장을 열어보세요'),
+      ]),
+      h('div', { class: 'ir-envelope-flap' }),
+      h('div', { class: 'ir-envelope-seal' }, '♥'),
+    ]);
+    const open = () => {
+      if (envelope.classList.contains('ir-envelope-open')) return;
+      envelope.classList.add('ir-envelope-open');
+      document.body.style.overflow = '';
+      setTimeout(() => {
+        overlay.classList.add('ir-envelope-fade');
+        setTimeout(() => overlay.remove(), 650);
+      }, 550);
+    };
+    overlay.addEventListener('click', open);
+    document.body.style.overflow = 'hidden';
+    overlay.append(envelope);
+    return overlay;
+  }
+
   function buildInviteCard(data, opts) {
     opts = opts || {};
     const build = BUILDERS[data.layout] || buildClassic;
@@ -494,6 +524,10 @@ window.InviteRender = (function () {
       if (data[field]) root.style.setProperty(varName, data[field]);
     });
     root.append(build(data, opts));
+    if (!opts.editable && !envelopeShown) {
+      envelopeShown = true;
+      root.append(buildEnvelopeOverlay(data));
+    }
     return root;
   }
 
@@ -665,6 +699,45 @@ window.InviteRender = (function () {
   position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
   color: rgba(255,255,255,0.85); font-size: 0.82rem; font-weight: 600; letter-spacing: 0.04em;
 }
+
+/* envelope-open intro */
+.ir-envelope-overlay {
+  position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center;
+  background: var(--ir-paper, #fffdfa); cursor: pointer; transition: opacity .6s ease;
+}
+.ir-envelope-overlay.ir-envelope-fade { opacity: 0; pointer-events: none; }
+.ir-envelope { position: relative; width: 240px; perspective: 800px; }
+.ir-envelope-body {
+  position: relative; width: 100%; aspect-ratio: 3/2;
+  background: var(--ir-panel, #fff); border: 1px solid var(--ir-border, #ecdfce); border-radius: 6px;
+  overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  padding-bottom: 18px; box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+}
+.ir-envelope-names {
+  font-family: var(--ir-font-head); font-weight: 700; font-size: 0.95rem; color: var(--ir-text);
+  display: flex; gap: 6px; align-items: center; margin-bottom: 6px;
+}
+.ir-envelope-names .heart { color: var(--ir-accent); }
+.ir-envelope-hint {
+  font-size: 0.72rem; color: var(--ir-muted); letter-spacing: 0.04em;
+  animation: ir-envelope-pulse 1.8s ease-in-out infinite;
+}
+@keyframes ir-envelope-pulse { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
+.ir-envelope-flap {
+  position: absolute; top: 0; left: 0; width: 100%; height: 62%;
+  background: var(--ir-panel-2, #fbeee1); border: 1px solid var(--ir-border, #ecdfce); border-top: none;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  transform-origin: top center; transform: rotateX(0deg); transform-style: preserve-3d;
+  transition: transform .6s ease;
+}
+.ir-envelope-seal {
+  position: absolute; top: 58%; left: 50%; transform: translate(-50%, -50%);
+  width: 34px; height: 34px; border-radius: 50%; background: var(--ir-accent); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 1rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15); z-index: 2; transition: opacity .25s ease;
+}
+.ir-envelope-open .ir-envelope-flap { transform: rotateX(-160deg); }
+.ir-envelope-open .ir-envelope-seal { opacity: 0; }
 `;
 
   if (!document.getElementById('ir-shared-style')) {
