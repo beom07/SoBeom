@@ -82,7 +82,7 @@ ${imageTag}
   }
   .empty { text-align: center; color: var(--sg-muted); padding: 60px 30px; font-size: 0.9rem; }
 
-  .slideshow { position: relative; width: 100%; aspect-ratio: 3/5; overflow: hidden; background: var(--sg-panel-2); }
+  .slideshow { position: relative; width: 100%; aspect-ratio: 2/3; overflow: hidden; background: var(--sg-panel-2); }
   .slide-track { display: flex; height: 100%; transition: transform .45s cubic-bezier(.4,0,.2,1); }
   .slide { flex: 0 0 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; touch-action: manipulation; }
   .slide img {
