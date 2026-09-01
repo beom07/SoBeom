@@ -18,9 +18,14 @@ window.SgRender = (function () {
   }
   function photoUrl(slot) { return `/.netlify/functions/invite-photo?slot=${encodeURIComponent(slot)}`; }
 
+  // No fixed box + crop: the frame's height instead matches each photo's
+  // own natural aspect ratio (scaled to the card's width) as you swipe
+  // between slides, so nothing — including an unusually tall photo like a
+  // timeline graphic — ever gets cropped off.
   function renderSlideshow(slides) {
     if (!slides || !slides.length) return null;
     let idx = 0;
+    const wrap = el('div', { class: 'slideshow' });
     const track = el('div', { class: 'slide-track' }, slides.map(s => {
       if (s.type === 'photo') {
         const img = el('img', { src: photoUrl(s.slot), alt: '' });
@@ -33,18 +38,42 @@ window.SgRender = (function () {
     const nextBtn = el('button', { class: 'slide-nav next', type: 'button' }, '›');
     const counter = el('div', { class: 'slide-counter' }, `1 / ${slides.length}`);
 
+    function fitHeight() {
+      const w = wrap.clientWidth;
+      if (!w) return;
+      const cur = slides[idx];
+      if (cur.type === 'photo') {
+        const img = track.children[idx].querySelector('img');
+        if (img && img.naturalWidth) {
+          const h = w * img.naturalHeight / img.naturalWidth;
+          wrap.style.height = Math.round(Math.min(Math.max(h, 220), 1200)) + 'px';
+          return;
+        }
+      }
+      wrap.style.height = '420px';
+    }
+
     function update() {
       track.style.transform = `translateX(-${idx * 100}%)`;
       counter.textContent = `${idx + 1} / ${slides.length}`;
       prevBtn.disabled = idx === 0;
       nextBtn.disabled = idx === slides.length - 1;
+      fitHeight();
     }
     prevBtn.addEventListener('click', () => { if (idx > 0) { idx--; update(); } });
     nextBtn.addEventListener('click', () => { if (idx < slides.length - 1) { idx++; update(); } });
-    update();
+    // Natural size isn't known until each photo finishes loading — fix up
+    // the height once it does, if it's still the slide being shown.
+    track.querySelectorAll('img').forEach((img, i) => {
+      img.addEventListener('load', () => { if (i === idx) fitHeight(); });
+    });
 
-    const wrap = el('div', { class: 'slideshow' }, [track, prevBtn, nextBtn]);
+    wrap.append(track, prevBtn, nextBtn);
     if (slides.length > 1) wrap.append(counter);
+    // wrap isn't attached to the document yet (this function just returns
+    // it to the caller to append), so clientWidth would read 0 right now —
+    // defer the first real measurement to the next paint.
+    requestAnimationFrame(update);
     return wrap;
   }
 
