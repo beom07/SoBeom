@@ -87,7 +87,7 @@ ${imageTag}
     transition: height .3s ease;
   }
   .slide-track { display: flex; height: 100%; transition: transform .45s cubic-bezier(.4,0,.2,1); }
-  .slide { flex: 0 0 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; touch-action: manipulation; }
+  .slide { flex: 0 0 100%; height: 93%; display: flex; align-items: center; justify-content: center; position: relative; touch-action: manipulation; }
   .slide img {
     width: 100%; height: 100%; object-fit: contain; display: block;
     pointer-events: none; touch-action: manipulation;
